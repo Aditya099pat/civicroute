@@ -1,0 +1,15 @@
+{
+  "name": "civicroute",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CivicRoute & Bureaucracy Engine - Municipal Bureaucracy Path Visualizer",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "backend": "npm --prefix backend run dev",
+    "install:frontend": "npm install --prefix frontend",
+    "install:backend": "npm install --prefix backend",
+    "postinstall": "npm install --prefix frontend"
+  }
+}
