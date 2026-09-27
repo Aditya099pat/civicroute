@@ -1,87 +1,119 @@
 import React from 'react';
-import { ArrowDown, Check, Unlock, Lock, ExternalLink } from 'lucide-react';
+import { ArrowDown, Check, Unlock, Lock, ExternalLink, ShieldCheck } from 'lucide-react';
 
-export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode }) {
+export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode, onToggleNode }) {
   return (
-    <div className="bg-[#091224] border border-[#1b2a47] rounded-xl p-6 mt-4">
-      <div className="mb-4">
-        <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-          Topological Clearance Flow
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mt-4">
+      <div className="mb-5 text-center max-w-lg mx-auto">
+        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+          Directed Prerequisite Lineage Graph (DAG)
         </h4>
-        <p className="text-[11px] text-[#94a3b8]">
-          Prerequisites must be satisfied in topological order before downstream licenses unlock.
+        <p className="text-[11px] text-slate-500 mt-0.5">
+          Topological clearance dependency flow. Milestones must be executed sequentially before dependent clearances are unlocked.
         </p>
       </div>
 
-      <div className="flex flex-col items-center space-y-4">
+      <div className="flex flex-col items-center space-y-3">
         {nodes.map((node, index) => {
           const isSelected = selectedNodeId === node.id;
           const hasDownstream = index < nodes.length - 1;
+          const isCompleted = node.status === 'completed';
+          const isAvailable = node.status === 'available';
+          const isLocked = node.status === 'locked';
 
-          let badgeBg = 'bg-slate-800 text-slate-400 border-slate-700';
-          let borderStyle = 'border-[#1e2e4a] bg-[#0e172a]';
+          let badgeClasses = 'bg-slate-100 text-slate-600 border-slate-200';
+          let borderClasses = 'border-slate-200 bg-white hover:border-slate-300';
           let icon = <Lock className="w-3.5 h-3.5 text-slate-400" />;
+          let iconBg = 'bg-slate-100 border-slate-200';
 
-          if (node.status === 'completed') {
-            badgeBg = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30';
-            borderStyle = 'border-emerald-500/40 bg-[#0d1d33]';
-            icon = <Check className="w-3.5 h-3.5 text-emerald-400" />;
-          } else if (node.status === 'available') {
-            badgeBg = 'bg-blue-950/60 text-blue-400 border-blue-500/30';
-            borderStyle = 'border-blue-500/50 bg-[#111f3d] shadow-lg shadow-blue-500/10';
-            icon = <Unlock className="w-3.5 h-3.5 text-blue-400" />;
+          if (isCompleted) {
+            badgeClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+            borderClasses = 'border-emerald-300 bg-emerald-50/30';
+            icon = <Check className="w-3.5 h-3.5 text-emerald-700" />;
+            iconBg = 'bg-emerald-100 border-emerald-200';
+          } else if (isAvailable) {
+            badgeClasses = 'bg-blue-50 text-blue-800 border-blue-200';
+            borderClasses = 'border-blue-300 bg-blue-50/30 ring-1 ring-blue-200 shadow-xs';
+            icon = <Unlock className="w-3.5 h-3.5 text-blue-700" />;
+            iconBg = 'bg-blue-100 border-blue-200';
+          }
+
+          let domain = 'gov.in';
+          try {
+            domain = new URL(node.url).hostname;
+          } catch {
+            domain = 'gov.in';
           }
 
           return (
             <React.Fragment key={node.id}>
               <div
                 onClick={() => onSelectNode(node.id)}
-                className={`w-full max-w-xl p-4 rounded-xl border transition-all cursor-pointer ${borderStyle} ${
-                  isSelected ? 'ring-2 ring-blue-500 scale-[1.01]' : 'hover:border-blue-400/40'
+                className={`w-full max-w-xl p-4 rounded-xl border transition-all cursor-pointer shadow-xs ${borderClasses} ${
+                  isSelected ? 'ring-2 ring-blue-600 scale-[1.01]' : ''
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-lg bg-[#14223f] border border-[#23355e]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start space-x-3">
+                    <div className={`p-2 rounded-lg border shrink-0 mt-0.5 ${iconBg}`}>
                       {icon}
                     </div>
                     <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono-code text-[10px] text-blue-400 font-bold">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-mono-code text-[10px] text-slate-700 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                           {node.code}
                         </span>
-                        <span className="text-xs text-slate-500">•</span>
-                        <span className="text-[11px] font-semibold text-slate-300">
+                        <span className="text-xs text-slate-300">•</span>
+                        <span className="text-xs font-semibold text-slate-700">
                           {node.dept}
                         </span>
+                        {node.gazetteCode && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <span className="font-mono-code text-[10px] text-slate-400">
+                              {node.gazetteCode}
+                            </span>
+                          </>
+                        )}
                       </div>
-                      <h5 className="text-xs font-bold text-white mt-0.5">{node.title}</h5>
+                      <h5 className="text-xs font-bold text-slate-900 mt-1">
+                        {node.title}
+                      </h5>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-slate-500 font-mono-code">
+                        <span>Fee: {node.fee}</span>
+                        <span>•</span>
+                        <span>SLA: {node.time}</span>
+                        <span>•</span>
+                        <a
+                          href={node.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center space-x-1 text-blue-700 hover:underline"
+                        >
+                          <ShieldCheck className="w-3 h-3 text-blue-700" />
+                          <span>{domain}</span>
+                          <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                        </a>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeBg}`}
-                    >
-                      {node.status === 'completed'
-                        ? 'Satisfied'
-                        : node.status === 'available'
-                        ? 'Ready'
-                        : 'Blocked'}
+                  <div className="text-right shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClasses}`}>
+                      {isCompleted ? 'Satisfied' : isAvailable ? 'Ready to File' : 'Blocked'}
                     </span>
-                    <div className="text-[10px] text-[#64748b] font-mono-code mt-1">
-                      {node.fee} • {node.time}
-                    </div>
                   </div>
                 </div>
 
                 {node.prereqs && node.prereqs.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-[#182744] flex items-center space-x-1.5 text-[10px] text-slate-400">
-                    <span>Prerequisites:</span>
+                  <div className="mt-2 pt-2 border-t border-slate-200/80 flex items-center space-x-1.5 text-[10px] text-slate-500">
+                    <span className="font-medium text-slate-600">Prerequisite requirement:</span>
                     {node.prereqs.map((pid) => (
                       <span
                         key={pid}
-                        className="bg-[#142340] border border-[#21355a] text-blue-300 px-1.5 py-0.2 rounded font-mono-code"
+                        className="bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-mono-code"
                       >
                         Step {pid}
                       </span>
@@ -92,9 +124,9 @@ export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode
 
               {hasDownstream && (
                 <div className="flex flex-col items-center">
-                  <div className="w-0.5 h-3 bg-[#1e2f52]" />
-                  <ArrowDown className="w-3.5 h-3.5 text-blue-400 -my-0.5" />
-                  <div className="w-0.5 h-3 bg-[#1e2f52]" />
+                  <div className="w-0.5 h-3 bg-slate-300" />
+                  <ArrowDown className="w-3.5 h-3.5 text-blue-700 -my-0.5" />
+                  <div className="w-0.5 h-3 bg-slate-300" />
                 </div>
               )}
             </React.Fragment>

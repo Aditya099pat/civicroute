@@ -1,12 +1,12 @@
 :root {
-  --color-brand-bg: #080d1a;
-  --color-brand-card: #0f172a;
-  --color-brand-card-inner: #131e36;
-  --color-brand-card-hover: #162340;
-  --color-brand-border: #1e293b;
-  --color-brand-border-light: #2a3a5c;
-  --color-brand-accent: #2563eb;
-  --color-brand-accent-hover: #1d4ed8;
-  --color-brand-text-muted: #94a3b8;
-  --color-brand-text-subtle: #64748b;
+  --color-brand-bg: #f8fafc;
+  --color-brand-card: #ffffff;
+  --color-brand-card-inner: #f1f5f9;
+  --color-brand-card-hover: #f8fafc;
+  --color-brand-border: #e2e8f0;
+  --color-brand-border-light: #cbd5e1;
+  --color-brand-accent: #1d4ed8;
+  --color-brand-accent-hover: #1e40af;
+  --color-brand-text-muted: #64748b;
+  --color-brand-text-subtle: #94a3b8;
 }

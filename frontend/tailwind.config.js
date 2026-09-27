@@ -4,26 +4,27 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
+        canvas: '#f1f2f4',
+        surface: '#ffffff',
+        borderSubtle: '#e2e4e8',
+        borderMuted: '#d4d6db',
         brand: {
-          bg: '#080d1a',
-          card: '#0f172a',
-          cardInner: '#131e36',
-          cardHover: '#162340',
-          border: '#1e293b',
-          borderLight: '#2a3a5c',
-          accent: '#2563eb',
-          accentHover: '#1d4ed8',
-          textMuted: '#94a3b8',
-          textSubtle: '#64748b'
+          bg: '#f1f2f4',
+          card: '#ffffff',
+          cardInner: '#f8fafc',
+          border: '#e2e4e8',
+          accent: '#4f46e5', // indigo-600
+          accentHover: '#4338ca', // indigo-700
+          textMuted: '#52525b',
+          textSubtle: '#71717a'
         }
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace']
+        sans: ['"Plus Jakarta Sans"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
       }
     },
   },
