@@ -35,8 +35,8 @@ export default function AdminModal({
 
   const startEdit = (node) => {
     setEditingNodeId(node.id);
-    setEditFee(node.fee);
-    setEditSla(node.time);
+    setEditFee(node.fee || '');
+    setEditSla(node.estimatedDays || node.time || '');
   };
 
   const saveEdit = (nodeId) => {
@@ -243,7 +243,7 @@ export default function AdminModal({
 
                 <div className="flex items-center justify-between pt-1 text-[11px]">
                   <span className="font-mono-code text-blue-700 truncate max-w-[340px]">
-                    {node.url}
+                    {node.officialUrl || node.url}
                   </span>
                   <span className="font-mono-code text-zinc-500">
                     {node.gazetteCode || 'GOV-IN-VERIFIED'}
@@ -328,7 +328,7 @@ export default function AdminModal({
                     <div className="flex items-center space-x-4 text-[11px] text-zinc-600 font-mono-code">
                       <span>Statutory Fee: <strong className="text-zinc-900">{node.fee}</strong></span>
                       <span>•</span>
-                      <span>SLA: <strong className="text-zinc-900">{node.time}</strong></span>
+                      <span>SLA: <strong className="text-zinc-900">{node.estimatedDays || node.time}</strong></span>
                     </div>
                   )}
                 </div>

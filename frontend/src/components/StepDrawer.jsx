@@ -26,15 +26,23 @@ export default function StepDrawer({
     }));
   };
 
-  // Find parent prerequisite nodes for jump links
-  const parentNodes = (node.prereqs || []).map(pid => allNodes.find(n => n.id === pid)).filter(Boolean);
+  // Normalize fields across legacy and new schemas
+  const prereqs = node.prerequisites || node.prereqs || [];
+  const parentNodes = prereqs.map(pid => allNodes.find(n => String(n.id) === String(pid))).filter(Boolean);
+  const dept = node.department || node.dept;
+  const time = node.estimatedDays || node.time;
+  const url = node.officialUrl || node.url;
+  const officeType = node.officeType || node.type;
+  const docs = node.documentsRequired || node.docs || [];
 
   // Extract domain for verification
   let domain = 'gov.in';
-  try {
-    domain = new URL(node.url).hostname;
-  } catch {
-    domain = 'gov.in';
+  if (url) {
+    try {
+      domain = new URL(url).hostname;
+    } catch {
+      domain = 'gov.in';
+    }
   }
 
   return (
@@ -46,9 +54,11 @@ export default function StepDrawer({
             <span className="font-mono-code text-[10px] uppercase font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
               NODE {node.code}
             </span>
-            <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
-              {node.dept}
-            </span>
+            {dept && (
+              <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
+                {dept}
+              </span>
+            )}
           </div>
           <h3 className="text-base font-bold text-zinc-900 mt-2 leading-snug">
             {node.title}
@@ -110,7 +120,7 @@ export default function StepDrawer({
                 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
                 : 'bg-zinc-200 text-zinc-400 cursor-not-allowed border border-zinc-300/60'
             }`}
-            title={isLocked ? `Blocked until Step #${(node.prereqs || []).join(', #')} is approved.` : ''}
+            title={isLocked ? `Blocked until Step #${prereqs.join(', #')} is approved.` : ''}
           >
             {isCompleted ? 'Mark Incomplete' : isAvailable ? 'Mark Satisfied ✓' : 'Locked 🔒'}
           </button>
@@ -140,7 +150,7 @@ export default function StepDrawer({
           }`}
         >
           <FileCheck className="w-3.5 h-3.5" />
-          <span>Document Enclosures ({node.docs?.length || 0})</span>
+          <span>Document Enclosures ({docs.length})</span>
         </button>
 
         <button
@@ -180,7 +190,7 @@ export default function StepDrawer({
                   SLA Turnaround
                 </span>
                 <span className="font-semibold text-zinc-900 text-sm mt-0.5 block">
-                  {node.time}
+                  {time}
                 </span>
                 <span className="text-[10px] text-zinc-500 mt-0.5 block">
                   RTS Act Standard
@@ -192,7 +202,7 @@ export default function StepDrawer({
                   Submission Mode
                 </span>
                 <span className="font-semibold text-zinc-900 mt-0.5 block">
-                  {node.type}
+                  {officeType}
                 </span>
               </div>
 
@@ -239,7 +249,7 @@ export default function StepDrawer({
                               {pNode.title}
                             </div>
                             <span className="font-mono-code text-[10px] text-zinc-500">
-                              {pNode.code} • {pNode.dept}
+                              {pNode.code} • {pNode.department || pNode.dept}
                             </span>
                           </div>
                         </div>
@@ -278,12 +288,12 @@ export default function StepDrawer({
             <div className="flex items-center justify-between text-xs text-zinc-500 pb-1">
               <span>Interactive Pre-filing Checklist:</span>
               <span className="font-semibold text-zinc-800">
-                {Object.values(checkedDocs).filter(Boolean).length} / {node.docs?.length || 0} checked
+                {Object.values(checkedDocs).filter(Boolean).length} / {docs.length} checked
               </span>
             </div>
 
             <div className="space-y-2">
-              {node.docs && node.docs.map((doc, idx) => {
+              {docs.map((doc, idx) => {
                 const isChecked = checkedDocs[`${node.id}_${idx}`];
                 return (
                   <div
@@ -343,17 +353,19 @@ export default function StepDrawer({
 
               <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between">
                 <span className="font-mono-code text-[11px] text-zinc-700 truncate max-w-[200px]">
-                  {node.url}
+                  {url}
                 </span>
-                <a
-                  href={node.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-xs transition"
-                >
-                  <span>Open Portal</span>
-                  <ExternalLink className="w-3 h-3 ml-0.5" />
-                </a>
+                {url && (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-xs transition"
+                  >
+                    <span>Open Portal</span>
+                    <ExternalLink className="w-3 h-3 ml-0.5" />
+                  </a>
+                )}
               </div>
             </div>
 

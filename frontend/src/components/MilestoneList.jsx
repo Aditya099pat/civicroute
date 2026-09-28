@@ -124,7 +124,7 @@ export default function MilestoneList({
                         <span className="text-xs font-bold text-zinc-900">{node.title}</span>
                       </div>
                       <div className="text-[11px] text-zinc-500 mt-0.5 font-mono-code">
-                        <span>{node.dept}</span> • <span>Fee: {node.fee}</span> • <span>SLA: {node.time}</span>
+                        <span>{node.department || node.dept}</span> • <span>Fee: {node.fee}</span> • <span>SLA: {node.estimatedDays || node.time}</span>
                       </div>
                     </div>
                   </div>

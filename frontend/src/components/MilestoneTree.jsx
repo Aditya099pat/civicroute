@@ -38,11 +38,18 @@ export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode
             iconBg = 'bg-blue-100 border-blue-200';
           }
 
+          const dept = node.department || node.dept;
+          const time = node.estimatedDays || node.time;
+          const url = node.officialUrl || node.url;
+          const prereqs = node.prerequisites || node.prereqs || [];
+
           let domain = 'gov.in';
-          try {
-            domain = new URL(node.url).hostname;
-          } catch {
-            domain = 'gov.in';
+          if (url) {
+            try {
+              domain = new URL(url).hostname;
+            } catch {
+              domain = 'gov.in';
+            }
           }
 
           return (
@@ -63,10 +70,14 @@ export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode
                         <span className="font-mono-code text-[10px] text-slate-700 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                           {node.code}
                         </span>
-                        <span className="text-xs text-slate-300">•</span>
-                        <span className="text-xs font-semibold text-slate-700">
-                          {node.dept}
-                        </span>
+                        {dept && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-xs font-semibold text-slate-700">
+                              {dept}
+                            </span>
+                          </>
+                        )}
                         {node.gazetteCode && (
                           <>
                             <span className="text-slate-300">•</span>
@@ -82,20 +93,28 @@ export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode
 
                       <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-slate-500 font-mono-code">
                         <span>Fee: {node.fee}</span>
-                        <span>•</span>
-                        <span>SLA: {node.time}</span>
-                        <span>•</span>
-                        <a
-                          href={node.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center space-x-1 text-blue-700 hover:underline"
-                        >
-                          <ShieldCheck className="w-3 h-3 text-blue-700" />
-                          <span>{domain}</span>
-                          <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
-                        </a>
+                        {time && (
+                          <>
+                            <span>•</span>
+                            <span>SLA: {time}</span>
+                          </>
+                        )}
+                        {url && (
+                          <>
+                            <span>•</span>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center space-x-1 text-blue-700 hover:underline"
+                            >
+                              <ShieldCheck className="w-3 h-3 text-blue-700" />
+                              <span>{domain}</span>
+                              <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                            </a>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -107,10 +126,10 @@ export default function MilestoneTree({ nodes = [], selectedNodeId, onSelectNode
                   </div>
                 </div>
 
-                {node.prereqs && node.prereqs.length > 0 && (
+                {prereqs.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-slate-200/80 flex items-center space-x-1.5 text-[10px] text-slate-500">
                     <span className="font-medium text-slate-600">Prerequisite requirement:</span>
-                    {node.prereqs.map((pid) => (
+                    {prereqs.map((pid) => (
                       <span
                         key={pid}
                         className="bg-slate-100 border border-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-mono-code"

@@ -1,0 +1,95 @@
+{
+    "task": "Property Tax Assessment & Name Mutation",
+    "jurisdiction": "Assessment & Collection Department, MCGM",
+    "totalFee": "₹850",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "PTX-01",
+            "title": "Sale Deed & Index-II Registration Clearance",
+            "department": "Inspector General of Registration (IGR)",
+            "officeType": "Online",
+            "estimatedDays": "1 Day",
+            "fee": "₹0",
+            "officialUrl": "https://igrmaharashtra.gov.in",
+            "documentsRequired": [
+                "Certified Index-II Copy",
+                "Registered Sale Deed / Agreement"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "PTX-02",
+            "title": "Society NOC & Previous Tax Dues Clearance",
+            "department": "Co-operative Housing Society / Ward",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "2 Days",
+            "fee": "₹0",
+            "officialUrl": "https://ptaxportal.mcgm.gov.in",
+            "documentsRequired": [
+                "Society Share Certificate Copy",
+                "Zero Dues Receipt of Last Financial Year"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "PTX-03",
+            "title": "Mutation Application Form Submission",
+            "department": "MCGM Property Tax Portal",
+            "officeType": "Online",
+            "estimatedDays": "5 Business Days",
+            "fee": "₹500",
+            "officialUrl": "https://ptaxportal.mcgm.gov.in",
+            "documentsRequired": [
+                "Property SAC Number",
+                "Attested Index-II Copy",
+                "Ownership Transfer Application"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "PTX-04",
+            "title": "Ward Inspector Field Assessment & Ledger Transfer",
+            "department": "Assessment & Collection Ward Desk",
+            "officeType": "Hybrid",
+            "estimatedDays": "5 Business Days",
+            "fee": "₹350",
+            "officialUrl": "https://portal.mcgm.gov.in",
+            "documentsRequired": [
+                "Field Inspection Verification Token",
+                "Public Notice Clearance"
+            ],
+            "prerequisites": [
+                "3"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e3-4",
+            "source": "3",
+            "target": "4"
+        }
+    ]
+}

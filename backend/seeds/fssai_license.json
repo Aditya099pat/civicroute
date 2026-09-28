@@ -1,0 +1,96 @@
+{
+    "task": "FSSAI Food Safety Operator License",
+    "jurisdiction": "Food Safety and Standards Authority of India (FoSCoS)",
+    "totalFee": "₹2,100",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "FSS-01",
+            "title": "Business Establishment Clearance (Gumasta)",
+            "department": "Municipal Corporation / Labour Dept",
+            "officeType": "Online",
+            "estimatedDays": "3 Days",
+            "fee": "₹1,500",
+            "officialUrl": "https://aaplesarkar.mahaonline.gov.in",
+            "documentsRequired": [
+                "Gumasta Certificate / Shop Act Copy",
+                "Partnership Deed or Incorporation Certificate"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "FSS-02",
+            "title": "Food Safety Management Declaration",
+            "department": "FoSCoS Regulatory Cell",
+            "officeType": "Online",
+            "estimatedDays": "1 Day",
+            "fee": "₹0",
+            "officialUrl": "https://foscos.fssai.gov.in",
+            "documentsRequired": [
+                "List of Food Categories Handled",
+                "FSMS Plan Undertaking",
+                "Photo ID of Food Safety Supervisor"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "FSS-03",
+            "title": "FoSCoS Application Form 'B' Filing",
+            "department": "Food Safety Designated Officer",
+            "officeType": "Online",
+            "estimatedDays": "5 - 7 Business Days",
+            "fee": "₹2,000 / Year",
+            "officialUrl": "https://foscos.fssai.gov.in",
+            "documentsRequired": [
+                "Premises Possession Proof",
+                "Equipment & Machinery List",
+                "Water Potability Lab Report"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "FSS-04",
+            "title": "Designated Officer Scrutiny & License Issuance",
+            "department": "FDA Maharashtra",
+            "officeType": "Hybrid",
+            "estimatedDays": "3 - 5 Business Days",
+            "fee": "₹100",
+            "officialUrl": "https://fda.maharashtra.gov.in",
+            "documentsRequired": [
+                "Signed Application Copy",
+                "Inspection Checklist Clearance"
+            ],
+            "prerequisites": [
+                "3"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e3-4",
+            "source": "3",
+            "target": "4"
+        }
+    ]
+}

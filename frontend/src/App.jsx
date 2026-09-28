@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import { INITIAL_PIPELINES, searchOrSynthesizePipeline } from './data/pipelines';
 import { resolveDAG, calculateReadiness } from './utils/dagResolver';
 import { printComplianceDocket } from './utils/printUtils';
+import { Loader2 } from 'lucide-react';
 import './App.css';
 import './styles/variables.css';
 import './styles/animations.css';
@@ -29,31 +30,101 @@ export default function App() {
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [isDynamicRoute, setIsDynamicRoute] = useState(false);
 
+  // Phase 2 Async Telemetry & Stepper State
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState('');
+
   // Derived state for the currently active pipeline
   const activePipeline = pipelines[activeKey] || Object.values(pipelines)[0];
   const readiness = calculateReadiness(activePipeline?.nodes || []);
   const selectedNode = activePipeline?.nodes.find((n) => n.id === selectedNodeId) || null;
 
-  // Handler: Search-first intent processing & dynamic pipeline synthesis
-  const handleSearchIntent = (query) => {
-    setActiveSearchQuery(query);
-    const result = searchOrSynthesizePipeline(query, pipelines);
-    if (!result) return;
+  // Helper: Toast Notifications
+  const showNotification = (msg) => {
+    setNotification(msg);
+    setTimeout(() => {
+      setNotification(null);
+    }, 4500);
+  };
 
-    if (result.isDynamic) {
+  // Handler: Search-first intent processing via live backend API with failover fallback
+  const handleSearchIntent = async (query) => {
+    if (!query || !query.trim()) return;
+
+    setActiveSearchQuery(query);
+    setSelectedNodeId(null);
+    setIsLoading(true);
+    setLoadingStatus('Connecting to Municipal Gazette & Compliance Index...');
+
+    const stepTimer = setTimeout(() => {
+      setLoadingStatus('Parsing prerequisites and compiling directed dependency graph...');
+    }, 900);
+
+    try {
+      // 1. Attempt live API resolution
+      const response = await fetch('http://localhost:5000/api/generate-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          location: selectedWard === 'k_west' ? 'Mumbai (MCGM Ward K-West)' : 'Mumbai, Maharashtra'
+        })
+      });
+
+      clearTimeout(stepTimer);
+
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const generatedKey = `dyn_${Date.now()}`;
+
+      // Structure synthesized backend output into pipeline state
+      const synthesizedPipeline = {
+        id: data.nodes?.[0]?.code || 'CIV-LIVE',
+        title: data.task || query,
+        jurisdiction: data.jurisdiction || 'Mumbai Municipal Corporation (MCGM)',
+        totalFee: data.totalFee || 'Statutory Fee Schedule Attached',
+        primaryDept: data.nodes?.[0]?.department || 'Municipal Facilitation Desk',
+        cycleTime: '14 - 21 Business Days',
+        nodes: data.nodes || [],
+        edges: data.edges || []
+      };
+
       setPipelines((prev) => ({
-        [result.key]: result.pipeline,
+        [generatedKey]: synthesizedPipeline,
         ...prev
       }));
-      setActiveKey(result.key);
+      setActiveKey(generatedKey);
       setIsDynamicRoute(true);
-      showNotification(`Analyzed Intent: Synthesized verified clearance roadmap for "${query}"`);
-    } else {
-      setActiveKey(result.key);
-      setIsDynamicRoute(false);
-      showNotification(`Identified Verified Municipal Pipeline: ${result.pipeline.title}`);
+      showNotification(`Live Engine Resolved: Compiled clearance roadmap for "${query}"`);
+
+    } catch (err) {
+      clearTimeout(stepTimer);
+      console.warn(`Backend unreachable (${err.message}). Using local synthesized pipeline.`);
+
+      // 2. Safe Fallback to local verified definitions
+      const result = searchOrSynthesizePipeline(query, pipelines);
+      if (result) {
+        if (result.isDynamic) {
+          setPipelines((prev) => ({
+            [result.key]: result.pipeline,
+            ...prev
+          }));
+          setActiveKey(result.key);
+          setIsDynamicRoute(true);
+          showNotification(`Cached Engine: Synthesized clearance roadmap for "${query}"`);
+        } else {
+          setActiveKey(result.key);
+          setIsDynamicRoute(false);
+          showNotification(`Identified Verified Municipal Pipeline: ${result.pipeline.title}`);
+        }
+      }
+    } finally {
+      setIsLoading(false);
+      setLoadingStatus('');
     }
-    setSelectedNodeId(null);
   };
 
   // Handler: Toggle a milestone's completion status & dynamically cascade DAG locks/unlocks
@@ -90,7 +161,12 @@ export default function App() {
 
       const updatedNodes = currentPipeline.nodes.map((node) => {
         if (node.id === nodeId) {
-          return { ...node, fee: fee || node.fee, time: time || node.time };
+          return {
+            ...node,
+            fee: fee || node.fee,
+            estimatedDays: time || node.estimatedDays || node.time,
+            time: time || node.time || node.estimatedDays
+          };
         }
         return node;
       });
@@ -112,13 +188,6 @@ export default function App() {
     );
   };
 
-  const showNotification = (msg) => {
-    setNotification(msg);
-    setTimeout(() => {
-      setNotification(null);
-    }, 4500);
-  };
-
   return (
     <div className="app-container bg-[#f1f2f4] text-zinc-900 font-sans min-h-screen flex flex-col">
       {/* Toast Notification Banner */}
@@ -129,7 +198,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 1. Top Navigation Bar (Polished, clean, no problem code, no parser/hash, no schema button) */}
+      {/* 1. Top Navigation Bar */}
       <Header
         onExportDocket={printComplianceDocket}
         onOpenAdmin={() => setIsAdminOpen(true)}
@@ -139,6 +208,17 @@ export default function App() {
 
       {/* 2. Main Canvas Area */}
       <main className="main-content flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-6">
+        {/* Active Resolution Loader Stepper */}
+        {isLoading && (
+          <div className="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm flex items-center space-x-3.5 animate-pulse">
+            <Loader2 className="w-5 h-5 text-blue-600 animate-spin shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-zinc-900">Synthesizing Official Regulatory Lineage</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">{loadingStatus}</p>
+            </div>
+          </div>
+        )}
+
         {/* Centered Floating Search Console & Metric Ribbon */}
         <SearchConsole
           pipeline={activePipeline}
@@ -146,6 +226,7 @@ export default function App() {
           onSearchIntent={handleSearchIntent}
           activeSearchQuery={activeSearchQuery}
           isDynamic={isDynamicRoute}
+          isLoading={isLoading}
         />
 
         {/* Horizontal Topological Milestone Roadmap Canvas */}
@@ -178,7 +259,7 @@ export default function App() {
         onUpdatePipelineNode={handleUpdatePipelineNode}
       />
 
-      {/* 5. Clean Institutional Footer (Polished, no problem code, no schema link) */}
+      {/* 5. Clean Institutional Footer */}
       <Footer
         onOpenAdmin={() => setIsAdminOpen(true)}
       />

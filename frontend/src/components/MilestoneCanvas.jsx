@@ -14,7 +14,7 @@ export default function MilestoneCanvas({
   // Extract all pending documents across available and locked nodes
   const pendingDocs = nodes
     .filter(n => n.status !== 'completed')
-    .flatMap(n => n.docs || [])
+    .flatMap(n => n.documentsRequired || n.docs || [])
     .slice(0, 4);
 
   return (
@@ -44,12 +44,19 @@ export default function MilestoneCanvas({
               const isAvailable = node.status === 'available';
               const isLocked = node.status === 'locked';
 
+              const dept = node.department || node.dept;
+              const time = node.estimatedDays || node.time;
+              const url = node.officialUrl || node.url;
+              const prereqs = node.prerequisites || node.prereqs || [];
+
               // Domain extraction
               let domain = 'gov.in';
-              try {
-                domain = new URL(node.url).hostname;
-              } catch {
-                domain = 'gov.in';
+              if (url) {
+                try {
+                  domain = new URL(url).hostname;
+                } catch {
+                  domain = 'gov.in';
+                }
               }
 
               // Card styling exactly matching reference image
@@ -94,9 +101,9 @@ export default function MilestoneCanvas({
 
                       {/* Node Metadata Specs */}
                       <div className="mt-2.5 space-y-1 text-[11px] text-zinc-600">
-                        {node.dept && (
+                        {dept && (
                           <div className="truncate">
-                            <span className="text-zinc-400">Dept:</span> {node.dept}
+                            <span className="text-zinc-400">Dept:</span> {dept}
                           </div>
                         )}
                         {node.fee && node.fee !== '₹0' && (
@@ -105,16 +112,16 @@ export default function MilestoneCanvas({
                             <span className="font-mono-code font-semibold text-zinc-800">{node.fee}</span>
                           </div>
                         )}
-                        {node.time && (
+                        {time && (
                           <div>
-                            <span className="text-zinc-400">SLA:</span> {node.time}
+                            <span className="text-zinc-400">SLA:</span> {time}
                           </div>
                         )}
-                        {node.url && (
+                        {url && (
                           <div className="truncate">
                             <span className="text-zinc-400">Source:</span>{' '}
                             <a
-                              href={node.url}
+                              href={url}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
@@ -139,16 +146,18 @@ export default function MilestoneCanvas({
                           <div className="text-[11px] font-bold text-blue-700">
                             Status: Ready to File
                           </div>
-                          <a
-                            href={node.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] rounded-lg shadow-xs flex items-center justify-center space-x-1 transition"
-                          >
-                            <span>Open Official Portal</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
+                          {url && (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] rounded-lg shadow-xs flex items-center justify-center space-x-1 transition"
+                            >
+                              <span>Open Official Portal</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
                         </div>
                       ) : (
                         <div className="text-[11px] text-zinc-500 font-medium">
@@ -156,9 +165,9 @@ export default function MilestoneCanvas({
                             <span>Status: Locked</span>
                             <Lock className="w-3 h-3 text-zinc-400" />
                           </div>
-                          {node.prereqs && node.prereqs.length > 0 && (
+                          {prereqs.length > 0 && (
                             <span className="text-[10px] text-zinc-400 font-mono-code">
-                              (Requires: #{node.prereqs.join(', #')})
+                              (Requires: #{prereqs.join(', #')})
                             </span>
                           )}
                         </div>
@@ -201,7 +210,7 @@ export default function MilestoneCanvas({
               <div className="flex justify-between">
                 <span>Readiness Score:</span>
                 <span className="font-semibold text-emerald-700">
-                  {Math.round((nodes.filter(n => n.status === 'completed').length / nodes.length) * 100)}%
+                  {Math.round((nodes.filter(n => n.status === 'completed').length / (nodes.length || 1)) * 100)}%
                 </span>
               </div>
             </div>

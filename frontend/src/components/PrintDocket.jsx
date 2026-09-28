@@ -60,42 +60,49 @@ export default function PrintDocket({ pipeline }) {
           Topological Clearance Sequence &amp; Counter Verification Sign-Off
         </h3>
 
-        {pipeline.nodes.map((node, i) => (
-          <div key={node.id} className="border border-black p-3.5 text-xs space-y-2">
-            <div className="flex justify-between items-start border-b border-gray-300 pb-1.5">
-              <div>
-                <span className="font-extrabold text-sm">
-                  Step {i + 1}: {node.title}
-                </span>
-                <div className="text-[11px] text-gray-700 font-mono">
-                  Code: {node.code} | Dept: {node.dept} {node.wardFacet ? `(${node.wardFacet})` : ''}
+        {pipeline.nodes.map((node, i) => {
+          const dept = node.department || node.dept;
+          const time = node.estimatedDays || node.time;
+          const url = node.officialUrl || node.url;
+          const officeType = node.officeType || node.type;
+          const docs = node.documentsRequired || node.docs || [];
+
+          return (
+            <div key={node.id} className="border border-black p-3.5 text-xs space-y-2">
+              <div className="flex justify-between items-start border-b border-gray-300 pb-1.5">
+                <div>
+                  <span className="font-extrabold text-sm">
+                    Step {i + 1}: {node.title}
+                  </span>
+                  <div className="text-[11px] text-gray-700 font-mono">
+                    Code: {node.code} | Dept: {dept} {node.wardFacet ? `(${node.wardFacet})` : ''}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-xs uppercase px-2 py-0.5 border border-black">
+                    {node.status.toUpperCase()}
+                  </span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="font-bold text-xs uppercase px-2 py-0.5 border border-black">
-                  {node.status.toUpperCase()}
-                </span>
+
+              <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
+                <div><strong>Statutory Fee:</strong> {node.fee}</div>
+                <div><strong>SLA Duration:</strong> {time}</div>
+                <div><strong>Mode:</strong> {officeType}</div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
-              <div><strong>Statutory Fee:</strong> {node.fee}</div>
-              <div><strong>SLA Duration:</strong> {node.time}</div>
-              <div><strong>Mode:</strong> {node.type}</div>
-            </div>
+              <div className="text-[11px]">
+                <strong>Verified Portal:</strong> {url}
+              </div>
 
-            <div className="text-[11px]">
-              <strong>Verified Portal:</strong> {node.url}
-            </div>
-
-            <div className="text-[11px]">
-              <strong>Mandatory Enclosures:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-0.5 pl-1">
-                {(node.docs || []).map((doc, idx) => (
-                  <li key={idx}>[  ] {doc}</li>
-                ))}
-              </ul>
-            </div>
+              <div className="text-[11px]">
+                <strong>Mandatory Enclosures:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-0.5 pl-1">
+                  {docs.map((doc, idx) => (
+                    <li key={idx}>[  ] {doc}</li>
+                  ))}
+                </ul>
+              </div>
 
             {/* Ward Counter Sign-off Box */}
             <div className="mt-2 pt-2 border-t border-dashed border-gray-400 flex justify-between items-center text-[10px] text-gray-800">
@@ -103,7 +110,8 @@ export default function PrintDocket({ pipeline }) {
               <span>Clerk Initial &amp; Date Stamp: ______________________</span>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
 
       {/* Institutional Citizen Rights Disclaimer */}

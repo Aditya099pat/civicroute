@@ -1,0 +1,94 @@
+{
+    "task": "Commercial Water Connection Approval",
+    "jurisdiction": "Hydraulic Engineer Department, MCGM",
+    "totalFee": "₹4,200",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "WTR-01",
+            "title": "Property Assessment Tax Clearance",
+            "department": "MCGM Assessment & Collection",
+            "officeType": "Online",
+            "estimatedDays": "2 Business Days",
+            "fee": "₹0",
+            "officialUrl": "https://ptaxportal.mcgm.gov.in",
+            "documentsRequired": [
+                "Property SAC Number",
+                "Paid Tax Receipt for Current Year"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "WTR-02",
+            "title": "Licensed Plumber Internal Pipeline Blueprint",
+            "department": "Licensed Plumbing Services Cell",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "4 Business Days",
+            "fee": "₹800",
+            "officialUrl": "https://portal.mcgm.gov.in/water",
+            "documentsRequired": [
+                "Internal Pipeline Blueprint",
+                "Licensed Plumber Signature & ID"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "WTR-03",
+            "title": "Road Opening & Trenching Clearance",
+            "department": "MCGM Roads & Traffic Ward Desk",
+            "officeType": "Hybrid",
+            "estimatedDays": "5 Business Days",
+            "fee": "₹1,500",
+            "officialUrl": "https://portal.mcgm.gov.in",
+            "documentsRequired": [
+                "Plumbing Route Map",
+                "Traffic Police Ward NOC"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "WTR-04",
+            "title": "Final Water Meter Tapping Sanction",
+            "department": "Hydraulic Engineer Department",
+            "officeType": "Hybrid",
+            "estimatedDays": "5 Business Days",
+            "fee": "₹1,900",
+            "officialUrl": "https://portal.mcgm.gov.in/water-sanction",
+            "documentsRequired": [
+                "Plumber Verification Report",
+                "Road Trenching Payment Challan"
+            ],
+            "prerequisites": [
+                "3"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e3-4",
+            "source": "3",
+            "target": "4"
+        }
+    ]
+}

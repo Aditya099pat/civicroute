@@ -1,0 +1,118 @@
+{
+    "task": "Grid-Connected Rooftop Solar Net Metering",
+    "jurisdiction": "MSEDCL (Mahavitaran) & MEDA",
+    "totalFee": "₹2,500",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "SOL-01",
+            "title": "Sanctioned Load & Bill Dues Verification",
+            "department": "MSEDCL Customer Billing Portal",
+            "officeType": "Online",
+            "estimatedDays": "1 Business Day",
+            "fee": "₹0",
+            "officialUrl": "https://www.mahadiscom.in",
+            "documentsRequired": [
+                "Latest Paid Electricity Bill",
+                "Consumer 12-Digit Number"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "SOL-02",
+            "title": "Technical Feasibility Approval by DISCOM",
+            "department": "MSEDCL Sub-Division Office",
+            "officeType": "Online",
+            "estimatedDays": "7 Business Days",
+            "fee": "₹1,000",
+            "officialUrl": "https://solarrooftop.gov.in",
+            "documentsRequired": [
+                "Roof Ownership Proof / Society NOC",
+                "Proposed Solar Plant Capacity (kW)"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "SOL-03",
+            "title": "Plant Installation by Empanelled Vendor",
+            "department": "MNRE Empanelled EPC Agency",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "10 Business Days",
+            "fee": "₹0 (Equipment Cost Separate)",
+            "officialUrl": "https://mnre.gov.in",
+            "documentsRequired": [
+                "Solar Inverter Serial Number",
+                "Module Flash Test Reports",
+                "Work Completion Report"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "SOL-04",
+            "title": "Electrical Inspector Testing (CEI)",
+            "department": "Chief Electrical Inspectorate (CEI Maharashtra)",
+            "officeType": "Hybrid",
+            "estimatedDays": "5 Business Days",
+            "fee": "₹1,500",
+            "officialUrl": "https://www.mahadiscom.in",
+            "documentsRequired": [
+                "CEI Inspection Certificate",
+                "Earth Resistance Test Report"
+            ],
+            "prerequisites": [
+                "3"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "5",
+            "code": "SOL-05",
+            "title": "Bi-Directional Meter Commissioning & PPA",
+            "department": "MSEDCL Circle Office",
+            "officeType": "Hybrid",
+            "estimatedDays": "4 Business Days",
+            "fee": "₹0",
+            "officialUrl": "https://www.mahadiscom.in",
+            "documentsRequired": [
+                "Signed Connection Agreement (PPA)",
+                "Testing & Commissioning Certificate"
+            ],
+            "prerequisites": [
+                "4"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e3-4",
+            "source": "3",
+            "target": "4"
+        },
+        {
+            "id": "e4-5",
+            "source": "4",
+            "target": "5"
+        }
+    ]
+}

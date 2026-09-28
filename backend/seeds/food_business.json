@@ -1,0 +1,130 @@
+{
+    "task": "Register a Small Food Business / Bakery",
+    "jurisdiction": "Mumbai (MCGM Ward K-West), Maharashtra",
+    "totalFee": "₹8,300",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "DOC-8812",
+            "title": "Business Identity & Tax Registration (PAN/TAN)",
+            "department": "Income Tax Department",
+            "officeType": "Online",
+            "estimatedDays": "Instant (Existing)",
+            "fee": "₹0",
+            "officialUrl": "https://incometax.gov.in",
+            "documentsRequired": [
+                "Personal PAN Card Copy",
+                "Identity Proof",
+                "Active Mobile for OTP"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "DOC-9043",
+            "title": "Gumasta License (Shop & Establishment Act)",
+            "department": "MCGM & Aaple Sarkar Portal",
+            "officeType": "Online",
+            "estimatedDays": "3-5 Business Days",
+            "fee": "₹1,500",
+            "officialUrl": "https://aaplesarkar.mahaonline.gov.in",
+            "documentsRequired": [
+                "Registered Rental Agreement",
+                "Landlord NOC",
+                "Identity Proof Copy",
+                "Premises Electricity Bill"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "DOC-4190",
+            "title": "Fire Safety Inspection & Clearance NOC",
+            "department": "Mumbai Fire Brigade (MCGM)",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "7-10 Business Days",
+            "fee": "₹2,200",
+            "officialUrl": "https://portal.mcgm.gov.in/fire-services",
+            "documentsRequired": [
+                "Floor Layout Blueprint",
+                "Gumasta Certificate",
+                "Fire Extinguisher Invoices"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "DOC-3321",
+            "title": "FSSAI Basic Food Registration",
+            "department": "Food Safety and Standards Authority of India (FoSCoS)",
+            "officeType": "Online",
+            "estimatedDays": "5 Business Days",
+            "fee": "₹100 / Year",
+            "officialUrl": "https://foscos.fssai.gov.in",
+            "documentsRequired": [
+                "Gumasta Certificate Copy",
+                "Government Photo ID",
+                "List of Proposed Food Items"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "5",
+            "code": "DOC-1108",
+            "title": "MCGM Health Trade License Approval",
+            "department": "MCGM Public Health Department",
+            "officeType": "Hybrid",
+            "estimatedDays": "10-14 Business Days",
+            "fee": "₹4,500",
+            "officialUrl": "https://portal.mcgm.gov.in/health-trade",
+            "documentsRequired": [
+                "FSSAI Registration Certificate",
+                "Fire Safety NOC",
+                "Water Potability Test Report",
+                "Property Tax Receipt"
+            ],
+            "prerequisites": [
+                "3",
+                "4"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e2-4",
+            "source": "2",
+            "target": "4"
+        },
+        {
+            "id": "e3-5",
+            "source": "3",
+            "target": "5"
+        },
+        {
+            "id": "e4-5",
+            "source": "4",
+            "target": "5"
+        }
+    ]
+}

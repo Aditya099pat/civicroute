@@ -21,7 +21,8 @@ export function checkDAGCycles(nodes = []) {
   });
 
   nodes.forEach(n => {
-    (n.prereqs || []).forEach(pId => {
+    const prereqs = n.prerequisites || n.prereqs || [];
+    prereqs.forEach(pId => {
       if (adj.has(pId)) {
         adj.get(pId).push(n.id);
         inDegree.set(n.id, (inDegree.get(n.id) || 0) + 1);
@@ -93,7 +94,7 @@ export function resolveDAG(nodes = [], toggledNodeId) {
       const node = updatedNodes[i];
       if (node.status === 'completed') continue;
 
-      const prereqs = node.prereqs || [];
+      const prereqs = node.prerequisites || node.prereqs || [];
       const allPrereqsMet = prereqs.every(pid => completedIds.has(pid));
       const expectedStatus = allPrereqsMet ? 'available' : 'locked';
 
@@ -153,21 +154,21 @@ export function generateDAGSchema(pipeline) {
       isAcyclic: !cycleInfo.hasCycle,
       topologicalExecutionOrder: cycleInfo.order,
       totalNodes: nodes.length,
-      edges: nodes.flatMap(n => (n.prereqs || []).map(p => ({ from: p, to: n.id })))
+      edges: nodes.flatMap(n => (n.prerequisites || n.prereqs || []).map(p => ({ from: p, to: n.id })))
     },
     nodesContract: nodes.map(n => ({
       nodeId: n.id,
       statutoryCode: n.code,
       title: n.title,
-      department: n.dept,
+      department: n.department || n.dept,
       wardFacet: n.wardFacet,
-      officialPortal: n.url,
-      submissionType: n.type,
+      officialPortal: n.officialUrl || n.url,
+      submissionType: n.officeType || n.type,
       fee: n.fee,
-      slaDuration: n.time,
+      slaDuration: n.estimatedDays || n.time,
       status: n.status,
-      prerequisites: n.prereqs || [],
-      mandatoryEnclosures: n.docs || []
+      prerequisites: n.prerequisites || n.prereqs || [],
+      mandatoryEnclosures: n.documentsRequired || n.docs || []
     })),
     provenanceAudit: {
       indexerTimestamp: new Date().toISOString(),
@@ -175,5 +176,54 @@ export function generateDAGSchema(pipeline) {
       gazetteVerificationHash: "SHA256-e8a9f24b01cf8841a",
       officialEndpointRegistry: ".gov.in Verified"
     }
+  };
+}
+
+/**
+ * Evaluates node completion and dynamically unlocks child nodes
+ * when all required parent milestones are satisfied.
+ */
+export function resolveDependencies(nodes) {
+  const completedIds = nodes
+    .filter((n) => n.status === "completed")
+    .map((n) => String(n.id));
+
+  return nodes.map((node) => {
+    // Keep already completed nodes intact
+    if (completedIds.includes(String(node.id))) {
+      return { ...node, status: "completed" };
+    }
+
+    // A node is ready to file if it has no prerequisites,
+    // or if every prerequisite ID is present in completedIds
+    const prereqs = Array.isArray(node.prerequisites)
+      ? node.prerequisites
+      : (Array.isArray(node.prereqs) ? node.prereqs : []);
+    const allPrereqsMet = prereqs.every((parentId) =>
+      completedIds.includes(String(parentId))
+    );
+
+    return {
+      ...node,
+      status: allPrereqsMet ? "available" : "locked",
+    };
+  });
+}
+
+/**
+ * Calculates percentage completion and total fees across milestones.
+ */
+export function calculatePipelineMetrics(nodes) {
+  if (!nodes || nodes.length === 0) {
+    return { completedCount: 0, totalCount: 0, progressPercent: 0 };
+  }
+
+  const completedCount = nodes.filter((n) => n.status === "completed").length;
+  const progressPercent = Math.round((completedCount / nodes.length) * 100);
+
+  return {
+    completedCount,
+    totalCount: nodes.length,
+    progressPercent,
   };
 }

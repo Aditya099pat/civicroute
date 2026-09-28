@@ -1,0 +1,97 @@
+{
+    "task": "Gumasta License (Shop & Establishment Act)",
+    "jurisdiction": "Labour Department, Maharashtra",
+    "totalFee": "₹1,500",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "GUM-01",
+            "title": "Proprietor / Partner Identity Verification (PAN/ID)",
+            "department": "Income Tax & Digital Gateway",
+            "officeType": "Online",
+            "estimatedDays": "Instant",
+            "fee": "₹0",
+            "officialUrl": "https://incometax.gov.in",
+            "documentsRequired": [
+                "PAN Card Copy",
+                "Identity Proof",
+                "Passport Size Photograph"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "GUM-02",
+            "title": "Commercial Premises Tenancy Validation",
+            "department": "Department of Registration & Stamps",
+            "officeType": "Online",
+            "estimatedDays": "1 Business Day",
+            "fee": "₹0",
+            "officialUrl": "https://igrmaharashtra.gov.in",
+            "documentsRequired": [
+                "Registered Rent Agreement / Lease Deed",
+                "Property Tax or Electricity Bill",
+                "Owner NOC Form"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "GUM-03",
+            "title": "Form 'A' / Intimation Submission (Aaple Sarkar)",
+            "department": "Maharashtra Labour Commission",
+            "officeType": "Online",
+            "estimatedDays": "2 - 3 Business Days",
+            "fee": "₹1,000",
+            "officialUrl": "https://aaplesarkar.mahaonline.gov.in",
+            "documentsRequired": [
+                "Shop Name Board Photo in Devanagari (Marathi)",
+                "Employee Count Declaration",
+                "Partnership Deed / MoA (if applicable)"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "GUM-04",
+            "title": "Digital Certificate Sanction & Download",
+            "department": "MCGM Ward Citizen Facilitation Centre",
+            "officeType": "Online",
+            "estimatedDays": "1 Business Day",
+            "fee": "₹500",
+            "officialUrl": "https://lms.mahaonline.gov.in",
+            "documentsRequired": [
+                "Fee Payment Challan Receipt",
+                "Signed Self-Declaration"
+            ],
+            "prerequisites": [
+                "3"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e3-4",
+            "source": "3",
+            "target": "4"
+        }
+    ]
+}

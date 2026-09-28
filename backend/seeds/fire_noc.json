@@ -1,0 +1,95 @@
+{
+    "task": "Fire Safety Inspection & Clearance NOC",
+    "jurisdiction": "Mumbai Fire Brigade / Maharashtra Fire Services",
+    "totalFee": "₹3,700",
+    "nodes": [
+        {
+            "id": "1",
+            "code": "FIR-01",
+            "title": "Approved Architectural Blueprint Sanction",
+            "department": "MCGM Building Proposal Department",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "5 Days",
+            "fee": "₹0",
+            "officialUrl": "https://autodcr.mcgm.gov.in",
+            "documentsRequired": [
+                "Floor Layout Plan with Emergency Exits",
+                "Structural Stability Certificate"
+            ],
+            "prerequisites": [],
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "code": "FIR-02",
+            "title": "Fire Fighting Equipment Deployment (Form 'A')",
+            "department": "Licensed Fire Protection Agency",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "3 Days",
+            "fee": "₹1,500",
+            "officialUrl": "https://mahafireservice.gov.in",
+            "documentsRequired": [
+                "ABC Dry Powder Extinguisher Invoices",
+                "Smoke Detector Installation Receipts",
+                "Licensed Agency Form A"
+            ],
+            "prerequisites": [
+                "1"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "3",
+            "code": "FIR-03",
+            "title": "Ward Fire Station Field Inspection",
+            "department": "Mumbai Fire Brigade (Zonal)",
+            "officeType": "Physical Ward Office",
+            "estimatedDays": "7 Business Days",
+            "fee": "₹1,200",
+            "officialUrl": "https://portal.mcgm.gov.in/fire-services",
+            "documentsRequired": [
+                "Provisional Scrutiny Challan",
+                "Premises Key Plan & Gas Pipeline Clearance"
+            ],
+            "prerequisites": [
+                "2"
+            ],
+            "status": "locked"
+        },
+        {
+            "id": "4",
+            "code": "FIR-04",
+            "title": "Final CFO Operational Fire NOC Endorsement",
+            "department": "Office of the Chief Fire Officer",
+            "officeType": "Hybrid",
+            "estimatedDays": "4 Business Days",
+            "fee": "₹1,000",
+            "officialUrl": "https://mahafireservice.gov.in",
+            "documentsRequired": [
+                "Station Officer Inspection Report",
+                "Paid Fire Premium Cess Receipt"
+            ],
+            "prerequisites": [
+                "3"
+            ],
+            "status": "locked"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1-2",
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "id": "e2-3",
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "id": "e3-4",
+            "source": "3",
+            "target": "4"
+        }
+    ]
+}
