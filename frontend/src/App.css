@@ -16,11 +16,17 @@ body {
   flex-direction: column;
   background-color: #f1f2f4;
   color: #18181b;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark .app-container {
+  background-color: #090a0f;
+  color: #f4f4f5;
 }
 
 .main-content {
   flex: 1;
-  background-color: #f1f2f4;
+  background-color: transparent;
   padding: 1.5rem 1rem 3rem;
   position: relative;
 }

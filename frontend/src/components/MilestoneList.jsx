@@ -18,15 +18,15 @@ export default function MilestoneList({
     <div className="space-y-3">
       {/* View Switcher Controls */}
       <div className="flex items-center justify-between px-2 max-w-7xl mx-auto w-full">
-        <div className="text-xs font-semibold text-zinc-500 flex items-center space-x-2">
+        <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 flex items-center space-x-2">
           <span>Topological Lineage Layout:</span>
-          <span className="text-zinc-800 font-bold">{nodes.length} Milestones</span>
+          <span className="text-zinc-800 dark:text-zinc-200 font-bold">{nodes.length} Milestones</span>
           {onResetPipeline && (
             <>
-              <span className="text-zinc-300">•</span>
+              <span className="text-zinc-300 dark:text-zinc-600">•</span>
               <button
                 onClick={onResetPipeline}
-                className="text-[11px] font-medium text-zinc-500 hover:text-zinc-900 hover:underline transition"
+                className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline transition"
               >
                 Change Pathway
               </button>
@@ -34,13 +34,13 @@ export default function MilestoneList({
           )}
         </div>
 
-        <div className="flex items-center space-x-1 bg-white p-1 rounded-lg border border-zinc-200 shadow-xs text-xs">
+        <div className="flex items-center space-x-1 bg-white dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xs text-xs">
           <button
             onClick={() => setViewMode('horizontal')}
             className={`px-3 py-1 font-semibold rounded-md transition ${
               viewMode === 'horizontal'
-                ? 'bg-zinc-900 text-white'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-zinc-900 dark:bg-blue-600 text-white'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
             Horizontal Roadmap
@@ -50,8 +50,8 @@ export default function MilestoneList({
             onClick={() => setViewMode('list')}
             className={`px-3 py-1 font-semibold rounded-md transition ${
               viewMode === 'list'
-                ? 'bg-zinc-900 text-white'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-zinc-900 dark:bg-blue-600 text-white'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
             Tabular List
@@ -61,8 +61,8 @@ export default function MilestoneList({
             onClick={() => setViewMode('tree')}
             className={`px-3 py-1 font-semibold rounded-md transition ${
               viewMode === 'tree'
-                ? 'bg-zinc-900 text-white'
-                : 'text-zinc-600 hover:text-zinc-900'
+                ? 'bg-zinc-900 dark:bg-blue-600 text-white'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
             DAG Graph
@@ -82,7 +82,7 @@ export default function MilestoneList({
       )}
 
       {viewMode === 'tree' && (
-        <div className="max-w-7xl mx-auto w-full bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs">
+        <div className="max-w-7xl mx-auto w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs transition-colors duration-200">
           <MilestoneTree
             nodes={nodes}
             selectedNodeId={selectedNodeId}
@@ -93,12 +93,12 @@ export default function MilestoneList({
       )}
 
       {viewMode === 'list' && (
-        <div className="max-w-7xl mx-auto w-full bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs space-y-3">
-          <div className="border-b border-zinc-100 pb-3 flex justify-between items-center">
-            <h4 className="text-sm font-bold text-zinc-900">
+        <div className="max-w-7xl mx-auto w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs space-y-3 transition-colors duration-200">
+          <div className="border-b border-zinc-100 dark:border-zinc-800 pb-3 flex justify-between items-center">
+            <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
               Clearance Directory &amp; Prerequisite Checklist
             </h4>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
               Click any row to open the multi-tab inspection drawer
             </span>
           </div>
@@ -109,9 +109,9 @@ export default function MilestoneList({
               const isCompleted = node.status === 'completed';
               const isAvailable = node.status === 'available';
 
-              let borderClass = 'border-zinc-200 bg-zinc-50/60 hover:bg-zinc-100/60';
-              if (isCompleted) borderClass = 'border-emerald-300 bg-emerald-50/30';
-              if (isAvailable) borderClass = 'border-blue-400 bg-blue-50/20';
+              let borderClass = 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/40 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/80';
+              if (isCompleted) borderClass = 'border-emerald-300 dark:border-emerald-700/80 bg-emerald-50/30 dark:bg-emerald-950/20';
+              if (isAvailable) borderClass = 'border-blue-400 dark:border-blue-700/80 bg-blue-50/20 dark:bg-blue-950/20';
 
               return (
                 <div
@@ -123,19 +123,19 @@ export default function MilestoneList({
                 >
                   <div className="flex items-center space-x-3">
                     <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
-                      isCompleted ? 'bg-emerald-600 text-white' : isAvailable ? 'bg-blue-600 text-white' : 'bg-zinc-200 text-zinc-600'
+                      isCompleted ? 'bg-emerald-600 text-white' : isAvailable ? 'bg-blue-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
                     }`}>
                       {index + 1}
                     </span>
 
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-mono-code text-[10px] text-zinc-500 bg-white px-1.5 py-0.5 rounded border border-zinc-200">
+                        <span className="font-mono-code text-[10px] text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                           {node.code}
                         </span>
-                        <span className="text-xs font-bold text-zinc-900">{node.title}</span>
+                        <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{node.title}</span>
                       </div>
-                      <div className="text-[11px] text-zinc-500 mt-0.5 font-mono-code">
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-mono-code">
                         <span>{node.department || node.dept}</span> • <span>Fee: {node.fee}</span> • <span>SLA: {node.estimatedDays || node.time}</span>
                       </div>
                     </div>
@@ -144,25 +144,25 @@ export default function MilestoneList({
                   <div className="flex items-center space-x-3">
                     {/* Concrete Status Iconography */}
                     {isCompleted ? (
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600 fill-emerald-100" />
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 fill-emerald-100 dark:fill-emerald-950" />
                         <span>Satisfied</span>
                       </span>
                     ) : isAvailable ? (
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/70">
                         <span className="relative flex h-1.5 w-1.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600 dark:bg-blue-400"></span>
                         </span>
                         <span>Ready to File</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
-                        <Lock className="w-2.5 h-2.5 text-zinc-400" />
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                        <Lock className="w-2.5 h-2.5 text-zinc-400 dark:text-zinc-500" />
                         <span>Locked</span>
                       </span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-zinc-400" />
+                    <ChevronRight className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                   </div>
                 </div>
               );

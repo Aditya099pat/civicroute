@@ -58,6 +58,37 @@ export default function App() {
     }
   });
 
+  // Dark/Light Theme state with LocalStorage persistence and system preference fallback
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('civicroute_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {
+      console.warn("Theme loading error:", e);
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('civicroute_theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {
+      console.warn("Theme persistence error:", e);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -287,10 +318,10 @@ export default function App() {
   };
 
   return (
-    <div className="app-container bg-[#f1f2f4] text-zinc-900 font-sans min-h-screen flex flex-col">
+    <div className="app-container bg-[#f1f2f4] dark:bg-[#090a0f] text-zinc-900 dark:text-zinc-100 font-sans min-h-screen flex flex-col transition-colors duration-200">
       {/* Toast Notification Banner */}
       {notification && (
-        <div className="fixed top-4 right-4 z-50 bg-zinc-900 border border-zinc-700 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-4 right-4 z-50 bg-zinc-900 dark:bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-200">
           <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
           <span>{notification}</span>
         </div>
@@ -298,6 +329,8 @@ export default function App() {
 
       {/* 1. Top Navigation Bar */}
       <Header
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onExportDocket={() => {
           if (activePipeline) {
             printComplianceDocket();
@@ -320,11 +353,11 @@ export default function App() {
       <main className="main-content flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-6">
         {/* Active Resolution Loader Stepper */}
         {isLoading && (
-          <div className="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm flex items-center space-x-3.5 animate-pulse">
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin shrink-0" />
+          <div className="bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl p-4 shadow-sm flex items-center space-x-3.5 animate-pulse">
+            <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
             <div>
-              <p className="text-xs font-bold text-zinc-900">Synthesizing Official Regulatory Lineage</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">{loadingStatus}</p>
+              <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Synthesizing Official Regulatory Lineage</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{loadingStatus}</p>
             </div>
           </div>
         )}

@@ -8,6 +8,10 @@
   color-scheme: light;
 }
 
+:root.dark {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -15,6 +19,12 @@ body {
   color: #18181b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark body {
+  background-color: #090a0f;
+  color: #f4f4f5;
 }
 
 .font-mono-code {
@@ -31,13 +41,25 @@ body {
   background: #ebecef;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #12131a;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #cbd0d8;
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #9fa4ad;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
 }
 
 /* Print Styles: Black and white physical citizen action docket */
