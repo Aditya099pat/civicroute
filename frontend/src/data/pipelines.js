@@ -521,10 +521,13 @@ export function searchOrSynthesizePipeline(query = "", currentPipelines = INITIA
   }
 
   // 2. Keyword routing to dedicated verified pipelines
-  if (normalized.includes("gumasta") || normalized.includes("shop act") || normalized.includes("establishment")) {
+  if (normalized.includes("gumasta") || normalized.includes("cloud kitchen") || normalized.includes("bakery")) {
+    return { key: "cloud_kitchen", pipeline: currentPipelines.cloud_kitchen || INITIAL_PIPELINES.cloud_kitchen, isDynamic: false };
+  }
+  if (normalized.includes("shop act") || normalized.includes("establishment")) {
     return { key: "gumasta_license", pipeline: currentPipelines.gumasta_license || INITIAL_PIPELINES.gumasta_license, isDynamic: false };
   }
-  if (normalized.includes("fssai") || normalized.includes("food") || normalized.includes("restaurant") || normalized.includes("bakery")) {
+  if (normalized.includes("fssai") || normalized.includes("food") || normalized.includes("restaurant")) {
     return { key: "fssai_license", pipeline: currentPipelines.fssai_license || INITIAL_PIPELINES.fssai_license, isDynamic: false };
   }
   if (normalized.includes("fire") || normalized.includes("cfo") || normalized.includes("extinguisher")) {

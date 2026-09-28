@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import SearchConsole from './components/SearchConsole';
 import MilestoneList from './components/MilestoneList';
+import WelcomeCatalog from './components/WelcomeCatalog';
 import StepDrawer from './components/StepDrawer';
 import AdminModal from './components/AdminModal';
 import PrintDocket from './components/PrintDocket';
@@ -20,23 +21,118 @@ import './styles/animations.css';
  * Hybrid Dashboard & Horizontal Topological Lineage Navigator
  */
 export default function App() {
-  // Application State
-  const [pipelines, setPipelines] = useState(INITIAL_PIPELINES);
-  const [activeKey, setActiveKey] = useState('cloud_kitchen');
+  // Application State with LocalStorage Persistence
+  const [pipelines, setPipelines] = useState(() => {
+    try {
+      const saved = localStorage.getItem('civicroute_pipelines');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load pipelines from localStorage:", e);
+    }
+    return INITIAL_PIPELINES;
+  });
+
+  const [activeKey, setActiveKey] = useState(() => {
+    try {
+      const saved = localStorage.getItem('civicroute_active_key');
+      if (saved && saved !== 'null' && saved !== 'undefined') return saved;
+    } catch (e) {
+      console.warn("Failed to load activeKey from localStorage:", e);
+    }
+    // Do NOT load cloud_kitchen by default on fresh visit!
+    return null;
+  });
+
   const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [selectedWard, setSelectedWard] = useState('k_west');
+
+  const [selectedWard, setSelectedWard] = useState(() => {
+    try {
+      return localStorage.getItem('civicroute_selected_ward') || 'k_west';
+    } catch {
+      return 'k_west';
+    }
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [activeSearchQuery, setActiveSearchQuery] = useState('');
-  const [isDynamicRoute, setIsDynamicRoute] = useState(false);
+
+  const [activeSearchQuery, setActiveSearchQuery] = useState(() => {
+    try {
+      return localStorage.getItem('civicroute_search_query') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [isDynamicRoute, setIsDynamicRoute] = useState(() => {
+    try {
+      return localStorage.getItem('civicroute_is_dynamic') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Phase 2 Async Telemetry & Stepper State
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
 
+  // Persist State to LocalStorage on Change
+  useEffect(() => {
+    try {
+      localStorage.setItem('civicroute_pipelines', JSON.stringify(pipelines));
+    } catch (e) {
+      console.warn("Failed to save pipelines:", e);
+    }
+  }, [pipelines]);
+
+  useEffect(() => {
+    try {
+      if (activeKey) {
+        localStorage.setItem('civicroute_active_key', activeKey);
+      } else {
+        localStorage.removeItem('civicroute_active_key');
+      }
+    } catch (e) {
+      console.warn("Failed to save activeKey:", e);
+    }
+  }, [activeKey]);
+
+  useEffect(() => {
+    try {
+      if (activeSearchQuery) {
+        localStorage.setItem('civicroute_search_query', activeSearchQuery);
+      } else {
+        localStorage.removeItem('civicroute_search_query');
+      }
+    } catch (e) {
+      console.warn("Failed to save searchQuery:", e);
+    }
+  }, [activeSearchQuery]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('civicroute_selected_ward', selectedWard);
+    } catch (e) {
+      console.warn("Failed to save selectedWard:", e);
+    }
+  }, [selectedWard]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('civicroute_is_dynamic', String(isDynamicRoute));
+    } catch (e) {
+      console.warn("Failed to save isDynamicRoute:", e);
+    }
+  }, [isDynamicRoute]);
+
   // Derived state for the currently active pipeline
-  const activePipeline = pipelines[activeKey] || Object.values(pipelines)[0];
-  const readiness = calculateReadiness(activePipeline?.nodes || []);
+  const activePipeline = activeKey && pipelines[activeKey] ? pipelines[activeKey] : null;
+  const readiness = activePipeline ? calculateReadiness(activePipeline.nodes || []) : { percentage: 0 };
   const selectedNode = activePipeline?.nodes.find((n) => n.id === selectedNodeId) || null;
 
   // Helper: Toast Notifications
@@ -129,6 +225,7 @@ export default function App() {
 
   // Handler: Toggle a milestone's completion status & dynamically cascade DAG locks/unlocks
   const handleToggleNode = (nodeId) => {
+    if (!activeKey) return;
     setPipelines((prev) => {
       const currentPipeline = prev[activeKey];
       if (!currentPipeline) return prev;
@@ -155,6 +252,7 @@ export default function App() {
 
   // Handler: Admin / Steward updates to node fee or SLA
   const handleUpdatePipelineNode = (nodeId, { fee, time }) => {
+    if (!activeKey) return;
     setPipelines((prev) => {
       const currentPipeline = prev[activeKey];
       if (!currentPipeline) return prev;
@@ -200,7 +298,13 @@ export default function App() {
 
       {/* 1. Top Navigation Bar */}
       <Header
-        onExportDocket={printComplianceDocket}
+        onExportDocket={() => {
+          if (activePipeline) {
+            printComplianceDocket();
+          } else {
+            showNotification('Please select a municipal pathway to export citizen docket.');
+          }
+        }}
         onOpenAdmin={() => setIsAdminOpen(true)}
         selectedWard={selectedWard}
         onSelectWard={setSelectedWard}
@@ -229,15 +333,31 @@ export default function App() {
           isLoading={isLoading}
         />
 
-        {/* Unified Civic Compliance Workbench & Milestone Pipeline */}
-        <MilestoneList
-          pipeline={activePipeline}
-          nodes={activePipeline?.nodes || []}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={(id) => setSelectedNodeId(id)}
-          onToggleNode={handleToggleNode}
-          onExportDocket={printComplianceDocket}
-        />
+        {/* Dynamic Route View: If a pipeline is active, render workbench; otherwise render the Welcome Catalog */}
+        {activePipeline ? (
+          <MilestoneList
+            pipeline={activePipeline}
+            nodes={activePipeline?.nodes || []}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={(id) => setSelectedNodeId(id)}
+            onToggleNode={handleToggleNode}
+            onExportDocket={printComplianceDocket}
+            onResetPipeline={() => {
+              setActiveKey(null);
+              setActiveSearchQuery('');
+              setIsDynamicRoute(false);
+            }}
+          />
+        ) : (
+          <WelcomeCatalog
+            onSelectPipeline={(key, query) => {
+              setActiveKey(key);
+              setActiveSearchQuery(query || '');
+              setIsDynamicRoute(false);
+            }}
+            onSearchIntent={handleSearchIntent}
+          />
+        )}
       </main>
 
       {/* 3. Dynamic Side Explanation Panel (Drawer) */}
@@ -265,7 +385,7 @@ export default function App() {
       />
 
       {/* 6. Printable Compliance Action Docket */}
-      <PrintDocket pipeline={activePipeline} />
+      {activePipeline && <PrintDocket pipeline={activePipeline} />}
     </div>
   );
 }

@@ -9,7 +9,8 @@ export default function MilestoneList({
   selectedNodeId,
   onSelectNode,
   onToggleNode,
-  onExportDocket
+  onExportDocket,
+  onResetPipeline
 }) {
   const [viewMode, setViewMode] = useState('horizontal'); // 'horizontal' | 'list' | 'tree'
 
@@ -20,6 +21,17 @@ export default function MilestoneList({
         <div className="text-xs font-semibold text-zinc-500 flex items-center space-x-2">
           <span>Topological Lineage Layout:</span>
           <span className="text-zinc-800 font-bold">{nodes.length} Milestones</span>
+          {onResetPipeline && (
+            <>
+              <span className="text-zinc-300">•</span>
+              <button
+                onClick={onResetPipeline}
+                className="text-[11px] font-medium text-zinc-500 hover:text-zinc-900 hover:underline transition"
+              >
+                Change Pathway
+              </button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center space-x-1 bg-white p-1 rounded-lg border border-zinc-200 shadow-xs text-xs">
