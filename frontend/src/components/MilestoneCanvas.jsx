@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Lock, ShieldCheck, ExternalLink, FileText, FileDown, Share2, CheckCircle2, ChevronRight, FileCheck, Building2, Check } from 'lucide-react';
+import { Lock, ShieldCheck, ExternalLink, FileText, FileDown, Share2, CheckCircle2, FileCheck, Building2, Check } from 'lucide-react';
 import VerificationBadge from './VerificationBadge';
+import DocumentVault from './DocumentVault';
 
 export default function MilestoneCanvas({
   pipeline,
@@ -28,12 +29,6 @@ export default function MilestoneCanvas({
       [key]: !prev[key]
     }));
   };
-
-  // Extract pipeline-specific documents
-  const pipelineDocs = nodes
-    .flatMap(n => n.documentsRequired || n.docs || [])
-    .filter((doc, idx, arr) => arr.indexOf(doc) === idx)
-    .slice(0, 3);
 
   // Standard mandatory physical compliance enclosures for municipal submission
   const standardEnclosures = [
@@ -481,40 +476,11 @@ export default function MilestoneCanvas({
               );
             })}
 
-            {/* Pipeline-Specific Document Enclosures */}
-            {pipelineDocs.map((doc, idx) => {
-              const docKey = `doc_${idx}`;
-              const isChecked = !!checkedEnclosures[docKey];
-              return (
-                <div
-                  key={docKey}
-                  onClick={() => toggleEnclosure(docKey)}
-                  className={`p-3 rounded-xl border transition cursor-pointer flex items-start space-x-2.5 ${
-                    isChecked
-                      ? 'bg-emerald-50/40 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
-                      : 'bg-zinc-50/80 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/70'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center border shrink-0 transition ${
-                    isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800'
-                  }`}>
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className={`text-xs font-semibold leading-tight ${
-                      isChecked ? 'text-zinc-500 dark:text-zinc-500 line-through' : 'text-zinc-900 dark:text-zinc-100'
-                    }`}>
-                      {doc}
-                    </div>
-                    <div className="mt-1 flex items-center space-x-1.5">
-                      <span className="text-[9px] font-mono-code font-bold uppercase px-1.5 py-0.2 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
-                        Stage Enclosure
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          </div>
+
+          {/* Unified Document Vault: every required doc across the pathway, deduped */}
+          <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800">
+            <DocumentVault pipeline={pipeline} />
           </div>
 
           {/* Institutional Counter Verification Notice */}

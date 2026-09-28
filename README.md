@@ -56,6 +56,12 @@ Flexible layout visualization modes including the high-density Tabular List with
 
 - **Integrated Command Omnibar**: Single-field civic intent search bar with instant `Enter` key execution and pre-configured quick seeds (*Gumasta License, FSSAI Food License, Property Tax Mutation, Rooftop Solar Net-Metering, Commercial Water Connection, Fire NOC*).
 - **Live Portal Verification (real, not decorative)**: Each official `.gov.in` link is checked live by the backend — genuine government domain, HTTPS, reachability, real TLS certificate details, and a real content hash — surfaced as honest *Reachable / Unreachable / Not verified* badges. Requests are restricted to a government-domain allowlist (SSRF-safe) and cached.
+- **Critical-Path Timeline**: A CPM engine over the DAG shows a realistic earliest-completion date, which clearances can run in **parallel**, and the critical path — as a Gantt view (`utils/timeline.js`, `TimelineView.jsx`).
+- **AI "Ask about this step"**: A Gemini-grounded assistant answers questions about a specific clearance, clearly labelled AI-generated with a verify-on-portal disclaimer (`POST /api/ask`, `StepAssistant.jsx`).
+- **Jurisdiction-agnostic**: A city / municipal-body selector (Mumbai, Pune, Nagpur, Delhi, Bengaluru, Hyderabad) drives the AI prompt so pathways resolve for any Indian city; Mumbai ships verified seeds, other cities are AI-generated and flagged (`data/jurisdictions.js`).
+- **Eligibility Wizard**: A short questionnaire tailors which clearances apply and adds advisory notes without mutating the pipeline (`EligibilityWizard.jsx`, `data/eligibilityRules.js`).
+- **Unified Document Vault**: One deduplicated checklist of every document across all steps, mapped back to each clearance, with progress persisted locally (`DocumentVault.jsx`, `hooks/useDocumentVault.js`).
+- **Voice Search**: Dictate your civic intent via the Web Speech API, with graceful fallback where unsupported (`hooks/useSpeechRecognition.js`).
 - **Shareable Pathways**: Copy a link that encodes the selected pathway and your completed milestones so anyone can open the same roadmap and progress (no server-side storage).
 - **PDF & Print Export**: Download the citizen action docket as a real PDF (`jsPDF` + `html2canvas`) or print it via the high-contrast print stylesheet.
 - **Single Source of Truth**: All pipeline definitions live in `backend/seeds/` and are served over the API, with a bundled frontend fallback for offline use — no data duplication/drift.
@@ -350,6 +356,11 @@ npm run preview
     }
   }
   ```
+
+### Ask the Step Assistant
+- **Endpoint**: `POST /api/ask`
+- **Request Body**: `{ "question": "...", "pipeline": { "task": "...", "jurisdiction": "..." }, "node": { ... }, "history": [] }`
+- Returns `{ "answer": "...", "offline": false }`. The prompt is grounded in the provided step context, refuses to invent fees/URLs, and always advises verifying on the official portal. Without a Gemini key (or on quota/error) it returns an honest offline message.
 
 ### Generate Regulatory Pipeline
 - **Endpoint**: `POST /api/generate-path`

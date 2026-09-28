@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { Search, ArrowRight, ShieldCheck, CheckCircle2, Lock, AlertTriangle } from 'lucide-react';
+import { Search, ArrowRight, ShieldCheck, CheckCircle2, Lock, AlertTriangle, Sparkles, Mic } from 'lucide-react';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 export default function SearchConsole({
   pipeline,
   readinessScore,
   onSearchIntent,
   activeSearchQuery = '',
-  isLoading = false
+  isLoading = false,
+  onPersonalize
 }) {
   const [searchInput, setSearchInput] = useState(activeSearchQuery);
+
+  const { supported: voiceSupported, listening, start: startVoice } = useSpeechRecognition({
+    lang: 'en-IN',
+    onResult: (transcript) => setSearchInput(transcript),
+  });
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -50,16 +57,33 @@ export default function SearchConsole({
                 }
               }}
               placeholder="What civic or commercial task do you want to accomplish? (e.g., 'Register a cloud kitchen in Mumbai', 'Get a new water connection')"
-              className="w-full pl-10 pr-36 sm:pr-40 py-2.5 sm:py-3 bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs md:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-800 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-zinc-800 focus:border-transparent transition shadow-xs"
+              className={`w-full pl-10 ${voiceSupported ? 'pr-44 sm:pr-52' : 'pr-36 sm:pr-40'} py-2.5 sm:py-3 bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs md:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-zinc-800 focus:border-transparent transition shadow-xs`}
             />
-            <button
-              type="submit"
-              disabled={isLoading || !searchInput.trim()}
-              className="absolute right-1.5 top-1.5 bottom-1.5 px-3.5 sm:px-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-blue-600 dark:hover:bg-blue-500 active:bg-black text-white font-semibold text-xs rounded-lg shadow-xs transition flex items-center space-x-1.5 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-            >
-              <span>Resolve Pathway</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="absolute right-1.5 top-1.5 bottom-1.5 flex items-center gap-1.5">
+              {voiceSupported && (
+                <button
+                  type="button"
+                  onClick={startVoice}
+                  className={`h-full px-2.5 rounded-lg border transition flex items-center ${
+                    listening
+                      ? 'bg-red-50 dark:bg-red-950/50 border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 animate-pulse'
+                      : 'bg-white dark:bg-zinc-700 border-zinc-200 dark:border-zinc-600 text-zinc-500 dark:text-zinc-300 hover:text-brand-600 dark:hover:text-brand-400'
+                  }`}
+                  title={listening ? 'Listening…' : 'Speak your request'}
+                  aria-label="Voice search"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={isLoading || !searchInput.trim()}
+                className="h-full px-3.5 sm:px-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-brand-600 dark:hover:bg-brand-500 active:bg-black text-white font-semibold text-xs rounded-lg shadow-xs transition flex items-center space-x-1.5 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                <span>Resolve Pathway</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Quick Sample Tags (Flat, subtle text buttons with 'Try:' prefix) */}
@@ -109,6 +133,16 @@ export default function SearchConsole({
 
           {/* Metric Stats */}
           <div className="flex items-center flex-wrap gap-4 border-t md:border-t-0 pt-2 md:pt-0 border-zinc-100 dark:border-zinc-800">
+            {onPersonalize && (
+              <button
+                onClick={onPersonalize}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800/60 hover:bg-brand-100 dark:hover:bg-brand-900/60 transition order-last md:order-first"
+                title="Answer a few questions to tailor this pathway to you"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Personalize</span>
+              </button>
+            )}
             <div>
               <span className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 block">Total Statutory Fees</span>
               <span className="font-mono-code font-bold text-zinc-900 dark:text-zinc-100 text-sm">{pipeline.totalFee}</span>

@@ -107,6 +107,30 @@ export async function fetchPipelineCatalog() {
 }
 
 /**
+ * Ask the grounded assistant a question about one clearance step.
+ * Returns { answer, offline }.
+ */
+export async function askAboutStep({ question, pipeline, node, history = [] }) {
+  try {
+    const data = await requestJson(
+      apiUrl('ask'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, pipeline, node, history }),
+      },
+      20000
+    );
+    return { answer: data.answer, offline: !!data.offline };
+  } catch {
+    return {
+      answer: 'The assistant is unavailable right now. Please check the official portal linked on this step.',
+      offline: true,
+    };
+  }
+}
+
+/**
  * Live-verify a set of official URLs. Returns a map of url -> verification
  * result. When the backend is down, returns null so callers can show an
  * honest "not verified" state rather than a fabricated one.

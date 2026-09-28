@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Printer, ShieldCheck, ChevronDown, CheckCircle2, MapPin, Sun, Moon, Share2, FileDown } from 'lucide-react';
+import { Printer, ShieldCheck, ChevronDown, CheckCircle2, MapPin, Building2, Sun, Moon, Share2, FileDown } from 'lucide-react';
+import { CITIES, MUMBAI_WARDS, getCity } from '../data/jurisdictions';
 
 export default function Header({
   onExportDocket,
@@ -9,35 +10,36 @@ export default function Header({
   onOpenAdmin,
   selectedWard,
   onSelectWard,
+  selectedCity = 'mumbai',
+  onSelectCity,
   onGoHome,
   theme = 'light',
   onToggleTheme
 }) {
   const [isWardDropdownOpen, setIsWardDropdownOpen] = useState(false);
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const wardRef = useRef(null);
+  const cityRef = useRef(null);
 
-  // Close the ward dropdown when clicking outside or pressing Escape.
+  // Close dropdowns when clicking outside or pressing Escape.
   useEffect(() => {
-    if (!isWardDropdownOpen) return;
     const onClickOutside = (e) => {
       if (wardRef.current && !wardRef.current.contains(e.target)) setIsWardDropdownOpen(false);
+      if (cityRef.current && !cityRef.current.contains(e.target)) setIsCityDropdownOpen(false);
     };
-    const onKey = (e) => { if (e.key === 'Escape') setIsWardDropdownOpen(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setIsWardDropdownOpen(false); setIsCityDropdownOpen(false); }
+    };
     document.addEventListener('mousedown', onClickOutside);
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('mousedown', onClickOutside);
       document.removeEventListener('keydown', onKey);
     };
-  }, [isWardDropdownOpen]);
+  }, []);
 
-  const wards = [
-    { id: 'k_west', label: 'Ward K-West (Andheri W / Juhu)' },
-    { id: 'g_south', label: 'Ward G-South (Worli / Lower Parel)' },
-    { id: 'd_ward', label: 'Ward D (Malabar Hill / Grant Rd)' },
-    { id: 'h_east', label: 'Ward H-East (Bandra E / Santacruz E)' }
-  ];
-
+  const wards = MUMBAI_WARDS;
+  const currentCity = getCity(selectedCity);
   const currentWardLabel = wards.find(w => w.id === selectedWard)?.label || wards[0].label;
 
   return (
@@ -71,18 +73,49 @@ export default function Header({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-              <span className="font-semibold text-zinc-700 dark:text-zinc-300">MCGM, Mumbai</span>
-              <span className="text-zinc-300 dark:text-zinc-600">•</span>
-              <span>Maharashtra State</span>
+              {/* City / Municipal Body Selector */}
+              <div className="relative inline-block" ref={cityRef} onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                  className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-brand-50 dark:bg-brand-950/50 hover:bg-brand-100 dark:hover:bg-brand-900/60 text-brand-800 dark:text-brand-300 border border-brand-200 dark:border-brand-800/70 transition"
+                >
+                  <Building2 className="w-2.5 h-2.5" />
+                  <span>{currentCity.body}, {currentCity.label}</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                {isCityDropdownOpen && (
+                  <div className="absolute left-0 mt-1 w-60 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl py-1 z-50 animate-in fade-in zoom-in-95">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-700">
+                      Select City / Municipal Body
+                    </div>
+                    {CITIES.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => { onSelectCity && onSelectCity(c.id); setIsCityDropdownOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-xs transition flex items-center justify-between ${
+                          selectedCity === c.id
+                            ? 'bg-brand-50 dark:bg-brand-950/60 font-semibold text-brand-900 dark:text-brand-300'
+                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700/60'
+                        }`}
+                      >
+                        <span>{c.body} · {c.label}, {c.state}</span>
+                        {c.seeded
+                          ? <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">seeded</span>
+                          : <span className="text-[9px] text-brand-500 font-bold">AI</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <span className="text-zinc-300 dark:text-zinc-600">•</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-semibold inline-flex items-center gap-1" title="Links point to official .gov.in portals; each is live-checked in the inspector">
                 <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 <span>official .gov.in portals</span>
               </span>
-              <span className="text-zinc-300 dark:text-zinc-600">•</span>
 
-              {/* Interactive Ward Switcher Dropdown (stopPropagation to avoid firing onGoHome) */}
-              <div className="relative inline-block" ref={wardRef} onClick={(e) => e.stopPropagation()}>
+              {/* Interactive Ward Switcher Dropdown (Mumbai only) */}
+              {selectedCity === 'mumbai' && <span className="text-zinc-300 dark:text-zinc-600">•</span>}
+              <div className={`relative inline-block ${selectedCity === 'mumbai' ? '' : 'hidden'}`} ref={wardRef} onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => setIsWardDropdownOpen(!isWardDropdownOpen)}
                   className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition"

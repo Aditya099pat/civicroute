@@ -8,14 +8,16 @@ import AdminModal from './components/AdminModal';
 import PrintDocket from './components/PrintDocket';
 import Footer from './components/Footer';
 import ToastStack from './components/ToastStack';
+import EligibilityWizard from './components/EligibilityWizard';
 import { INITIAL_PIPELINES } from './data/pipelines';
 import { resolveDAG, calculateReadiness, resolveDependencies } from './utils/dagResolver';
 import { fetchBureaucracyPath } from './utils/api';
 import { printComplianceDocket, downloadComplianceDocketPdf } from './utils/printUtils';
 import { buildShareUrl, parseShareState } from './utils/shareState';
+import { resolveLocation } from './data/jurisdictions';
 import { useToasts } from './hooks/useToasts';
 import { useVerification } from './hooks/useVerification';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles, X } from 'lucide-react';
 import './App.css';
 import './styles/variables.css';
 import './styles/animations.css';
@@ -80,6 +82,14 @@ export default function App() {
     }
   });
 
+  const [selectedCity, setSelectedCity] = useState(() => {
+    try {
+      return localStorage.getItem('civicroute_selected_city') || 'mumbai';
+    } catch {
+      return 'mumbai';
+    }
+  });
+
   // Dark/Light Theme state with LocalStorage persistence and system preference fallback
   const [theme, setTheme] = useState(() => {
     try {
@@ -112,7 +122,14 @@ export default function App() {
   };
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [eligibility, setEligibility] = useState(null); // { summary, nodeNotes }
   const { toasts, notify, dismiss } = useToasts();
+
+  // Clear personalization when the active pathway changes.
+  useEffect(() => {
+    setEligibility(null);
+  }, [activeKey]);
 
   const [activeSearchQuery, setActiveSearchQuery] = useState(() => {
     try {
@@ -177,6 +194,14 @@ export default function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('civicroute_selected_city', selectedCity);
+    } catch (e) {
+      console.warn("Failed to save selectedCity:", e);
+    }
+  }, [selectedCity]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('civicroute_is_dynamic', String(isDynamicRoute));
     } catch (e) {
       console.warn("Failed to save isDynamicRoute:", e);
@@ -207,9 +232,7 @@ export default function App() {
       setLoadingStatus('Parsing prerequisites and compiling directed dependency graph...');
     }, 900);
 
-    const location = selectedWard === 'k_west'
-      ? 'Mumbai (MCGM Ward K-West)'
-      : 'Mumbai, Maharashtra';
+    const location = resolveLocation(selectedCity, selectedWard);
 
     try {
       const { pipeline, isOfflineFallback, matchKey, isDynamic } =
@@ -392,6 +415,8 @@ export default function App() {
         onOpenAdmin={() => setIsAdminOpen(true)}
         selectedWard={selectedWard}
         onSelectWard={setSelectedWard}
+        selectedCity={selectedCity}
+        onSelectCity={setSelectedCity}
         onGoHome={() => {
           setActiveKey(null);
           setActiveSearchQuery('');
@@ -434,7 +459,32 @@ export default function App() {
           onSearchIntent={handleSearchIntent}
           activeSearchQuery={activeSearchQuery}
           isLoading={isLoading}
+          onPersonalize={() => setIsWizardOpen(true)}
         />
+
+        {/* Personalized eligibility summary */}
+        {activePipeline && eligibility && (
+          <div className="max-w-7xl mx-auto w-full bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800/60 rounded-2xl p-4 animate-fade-in-up">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-brand-900 dark:text-brand-200">Tailored to your answers <span className="font-normal text-brand-700/80 dark:text-brand-300/70">· advisory only, verify on the portal</span></p>
+                  <ul className="mt-1.5 space-y-1">
+                    {eligibility.summary.map((s, i) => (
+                      <li key={i} className="text-[11px] text-brand-800 dark:text-brand-300 leading-snug flex gap-1.5">
+                        <span className="text-brand-400">•</span><span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <button onClick={() => setEligibility(null)} className="text-brand-400 hover:text-brand-700 dark:hover:text-brand-200 shrink-0" aria-label="Dismiss personalization">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Route View: If a pipeline is active, render workbench; otherwise render the Welcome Catalog */}
         {activePipeline ? (
@@ -469,11 +519,13 @@ export default function App() {
       <StepDrawer
         node={selectedNode}
         allNodes={activePipeline?.nodes || []}
+        pipeline={activePipeline}
         isOpen={!!selectedNodeId}
         onClose={() => setSelectedNodeId(null)}
         onToggleStatus={handleToggleNode}
         onSelectNode={(id) => setSelectedNodeId(id)}
         verification={verification}
+        eligibilityNote={eligibility?.nodeNotes?.[selectedNodeId]}
       />
 
       {/* 4. Privileged Clerk / Steward Audit Modal */}
@@ -484,6 +536,17 @@ export default function App() {
         activePipeline={activePipeline}
         onUpdatePipelineNode={handleUpdatePipelineNode}
         verification={verification}
+      />
+
+      {/* Eligibility Personalization Wizard */}
+      <EligibilityWizard
+        isOpen={isWizardOpen}
+        pipeline={activePipeline}
+        onClose={() => setIsWizardOpen(false)}
+        onApply={(result) => {
+          setEligibility(result);
+          showNotification('Roadmap personalized to your answers.', 'success');
+        }}
       />
 
       {/* 5. Clean Institutional Footer */}

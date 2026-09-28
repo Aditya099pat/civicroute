@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, FileCheck, ShieldCheck, ExternalLink, Lock, Unlock, ArrowRight, GitFork, AlertCircle, Info, Calendar } from 'lucide-react';
+import { X, Check, FileCheck, ShieldCheck, ExternalLink, Lock, Unlock, ArrowRight, GitFork, Info, Calendar, Sparkles } from 'lucide-react';
 import VerificationBadge from './VerificationBadge';
+import StepAssistant from './StepAssistant';
 
 export default function StepDrawer({
   node,
   allNodes = [],
+  pipeline,
   isOpen,
   onClose,
   onToggleStatus,
   onSelectNode,
-  verification
+  verification,
+  eligibilityNote
 }) {
   const [activeTab, setActiveTab] = useState('prereqs'); // 'prereqs' | 'docs' | 'provenance'
   const [checkedDocs, setCheckedDocs] = useState({});
@@ -176,7 +179,19 @@ export default function StepDrawer({
           }`}
         >
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Official Provenance</span>
+          <span>Provenance</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('ask')}
+          className={`py-2.5 px-3 border-b-2 flex items-center space-x-1.5 transition ${
+            activeTab === 'ask'
+              ? 'border-brand-600 dark:border-brand-400 text-brand-700 dark:text-brand-400 font-bold bg-white dark:bg-zinc-900'
+              : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Ask AI</span>
         </button>
       </div>
 
@@ -185,6 +200,14 @@ export default function StepDrawer({
         {/* TAB 1: PREREQUISITES & SPECIFICATIONS */}
         {activeTab === 'prereqs' && (
           <div className="space-y-4">
+            {/* Personalized note from the eligibility wizard */}
+            {eligibilityNote && (
+              <div className="p-3 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/50 flex items-start gap-2 text-[11px] text-brand-800 dark:text-brand-300">
+                <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <div><span className="font-bold">Tailored to you: </span>{eligibilityNote.note}</div>
+              </div>
+            )}
+
             {/* Metadata Grid */}
             <div className="grid grid-cols-2 gap-2.5">
               <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-[#e2e4e8] dark:border-zinc-800">
@@ -425,6 +448,13 @@ export default function StepDrawer({
                 </p>
               )}
             </div>
+          </div>
+        )}
+
+        {/* TAB 4: AI ASSISTANT */}
+        {activeTab === 'ask' && (
+          <div className="h-full min-h-[360px] flex flex-col">
+            <StepAssistant node={node} pipeline={pipeline} />
           </div>
         )}
       </div>

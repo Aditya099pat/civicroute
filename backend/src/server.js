@@ -8,6 +8,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 import { getCatalog, getPipeline, matchSeed, sumFees } from './pipelines.js';
 import { verifyUrls } from './verify.js';
+import { buildAskSystemPrompt, buildAskContents } from './assistant.js';
 
 dotenv.config();
 
@@ -15,8 +16,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const VERSION = '1.1.0';
 const START_TIME = Date.now();
-const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.0-flash';
+const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.8-flash';
 
 // ---- Security & platform middleware --------------------------------------
 app.use(helmet());
@@ -150,6 +151,48 @@ app.post('/api/verify-urls', async (req, res) => {
   } catch (err) {
     console.error('[Verify Error]', err.message);
     return res.status(500).json({ error: 'Verification failed.', details: err.message });
+  }
+});
+
+// Grounded assistant: answer a question about one clearance step.
+app.post('/api/ask', async (req, res) => {
+  const { question, pipeline, node, history } = req.body || {};
+  if (!question || typeof question !== 'string' || !question.trim()) {
+    return res.status(400).json({ error: 'Provide a "question".' });
+  }
+  if (question.length > 500) {
+    return res.status(400).json({ error: 'Question too long (max 500 characters).' });
+  }
+  if (!ai || !process.env.GEMINI_API_KEY) {
+    return res.status(200).json({
+      answer: 'The AI assistant is offline (no API key configured). Please check the official portal linked on this step for authoritative guidance.',
+      offline: true,
+    });
+  }
+  try {
+    const systemInstruction = buildAskSystemPrompt({ pipeline: pipeline || {}, node: node || {} });
+    const contents = buildAskContents(question.trim(), history);
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: PRIMARY_MODEL,
+        contents,
+        config: { systemInstruction, temperature: 0.3 },
+      });
+    } catch (e1) {
+      response = await ai.models.generateContent({
+        model: FALLBACK_MODEL,
+        contents,
+        config: { systemInstruction, temperature: 0.3 },
+      });
+    }
+    return res.status(200).json({ answer: response.text, offline: false });
+  } catch (error) {
+    console.error('[Ask Error]', error.message);
+    return res.status(200).json({
+      answer: 'I could not reach the assistant right now. Please refer to the official portal linked on this step.',
+      offline: true,
+    });
   }
 });
 
