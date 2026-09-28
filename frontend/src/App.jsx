@@ -219,7 +219,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Centered Floating Search Console & Metric Ribbon */}
+        {/* Integrated Command Omnibar & Metric Ribbon */}
         <SearchConsole
           pipeline={activePipeline}
           readinessScore={readiness.percentage}
@@ -229,7 +229,7 @@ export default function App() {
           isLoading={isLoading}
         />
 
-        {/* Horizontal Topological Milestone Roadmap Canvas */}
+        {/* Unified Civic Compliance Workbench & Milestone Pipeline */}
         <MilestoneList
           pipeline={activePipeline}
           nodes={activePipeline?.nodes || []}

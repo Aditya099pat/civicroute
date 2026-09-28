@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import MilestoneCanvas from './MilestoneCanvas';
-import { Layers, List, GitFork, Check, Unlock, Lock, ExternalLink, ShieldCheck, ChevronRight } from 'lucide-react';
 import MilestoneTree from './MilestoneTree';
+import { Layers, List, GitFork, CheckCircle2, Lock, ChevronRight } from 'lucide-react';
 
 export default function MilestoneList({
   pipeline,
@@ -22,7 +22,7 @@ export default function MilestoneList({
           <span className="text-zinc-800 font-bold">{nodes.length} Milestones</span>
         </div>
 
-        <div className="flex items-center space-x-1 bg-white p-1 rounded-lg border border-[#e2e4e8] shadow-xs text-xs">
+        <div className="flex items-center space-x-1 bg-white p-1 rounded-lg border border-zinc-200 shadow-xs text-xs">
           <button
             onClick={() => setViewMode('horizontal')}
             className={`px-3 py-1 font-semibold rounded-md transition ${
@@ -70,7 +70,7 @@ export default function MilestoneList({
       )}
 
       {viewMode === 'tree' && (
-        <div className="max-w-7xl mx-auto w-full bg-white border border-[#e2e4e8] rounded-2xl p-6 shadow-xs">
+        <div className="max-w-7xl mx-auto w-full bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs">
           <MilestoneTree
             nodes={nodes}
             selectedNodeId={selectedNodeId}
@@ -81,7 +81,7 @@ export default function MilestoneList({
       )}
 
       {viewMode === 'list' && (
-        <div className="max-w-7xl mx-auto w-full bg-white border border-[#e2e4e8] rounded-2xl p-6 shadow-xs space-y-3">
+        <div className="max-w-7xl mx-auto w-full bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs space-y-3">
           <div className="border-b border-zinc-100 pb-3 flex justify-between items-center">
             <h4 className="text-sm font-bold text-zinc-900">
               Clearance Directory &amp; Prerequisite Checklist
@@ -97,7 +97,7 @@ export default function MilestoneList({
               const isCompleted = node.status === 'completed';
               const isAvailable = node.status === 'available';
 
-              let borderClass = 'border-[#e2e4e8] bg-zinc-50/60 hover:bg-zinc-100/60';
+              let borderClass = 'border-zinc-200 bg-zinc-50/60 hover:bg-zinc-100/60';
               if (isCompleted) borderClass = 'border-emerald-300 bg-emerald-50/30';
               if (isAvailable) borderClass = 'border-blue-400 bg-blue-50/20';
 
@@ -130,15 +130,26 @@ export default function MilestoneList({
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isCompleted
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : isAvailable
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-zinc-200 text-zinc-600'
-                    }`}>
-                      {isCompleted ? 'Satisfied' : isAvailable ? 'Ready to File' : 'Locked'}
-                    </span>
+                    {/* Concrete Status Iconography */}
+                    {isCompleted ? (
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 fill-emerald-100" />
+                        <span>Satisfied</span>
+                      </span>
+                    ) : isAvailable ? (
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
+                        </span>
+                        <span>Ready to File</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                        <Lock className="w-2.5 h-2.5 text-zinc-400" />
+                        <span>Locked</span>
+                      </span>
+                    )}
                     <ChevronRight className="w-4 h-4 text-zinc-400" />
                   </div>
                 </div>

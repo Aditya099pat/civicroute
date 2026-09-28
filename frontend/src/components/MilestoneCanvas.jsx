@@ -1,5 +1,5 @@
-import React from 'react';
-import { Lock, Unlock, Check, ArrowRight, ShieldCheck, ExternalLink, FileText, CheckCircle2, ChevronRight, Layers, List, GitFork } from 'lucide-react';
+import React, { useState } from 'react';
+import { Lock, ShieldCheck, ExternalLink, FileText, CheckCircle2, ChevronRight, FileCheck, Building2, Check } from 'lucide-react';
 
 export default function MilestoneCanvas({
   pipeline,
@@ -9,242 +9,354 @@ export default function MilestoneCanvas({
   onToggleNode,
   onExportDocket
 }) {
+  const [checkedEnclosures, setCheckedEnclosures] = useState({});
+
   if (!pipeline) return null;
 
-  // Extract all pending documents across available and locked nodes
-  const pendingDocs = nodes
-    .filter(n => n.status !== 'completed')
+  const toggleEnclosure = (key) => {
+    setCheckedEnclosures(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Extract pipeline-specific documents
+  const pipelineDocs = nodes
     .flatMap(n => n.documentsRequired || n.docs || [])
-    .slice(0, 4);
+    .filter((doc, idx, arr) => arr.indexOf(doc) === idx)
+    .slice(0, 3);
+
+  // Standard mandatory physical compliance enclosures for municipal submission
+  const standardEnclosures = [
+    {
+      id: 'affidavit',
+      title: '₹100 Non-Judicial Stamp Paper Self-Declaration & Indemnity',
+      desc: 'Notarized affidavit on standard municipal format (Annexure-A)',
+      requiredOriginal: true
+    },
+    {
+      id: 'zero_dues',
+      title: 'Latest Property Tax & Water Charges Zero-Dues Clearance Receipt',
+      desc: 'Official MCGM receipt showing zero arrears for current fiscal year',
+      requiredOriginal: false
+    },
+    {
+      id: 'society_noc',
+      title: 'Registered Society (CHS) NOC & Share Certificate Copy',
+      desc: 'Managing Committee resolution or developer title consent',
+      requiredOriginal: false
+    }
+  ];
 
   return (
-    <div className="bg-white border border-[#e2e4e8] rounded-2xl shadow-xs overflow-hidden max-w-7xl mx-auto w-full">
-      {/* Container Header */}
-      <div className="px-6 py-4 border-b border-[#e2e4e8] flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-bold text-zinc-800">Generated Path:</span>
-          <span className="text-sm font-extrabold text-zinc-950">{pipeline.title}</span>
-        </div>
-
-        <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full shrink-0">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Verified Official Source</span>
-        </div>
-      </div>
-
-      {/* Main Grid: Horizontal Pipeline Canvas + Right Summary Panel */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 p-6 gap-6 items-start">
-        {/* LEFT 3 COLS: Horizontal Milestone Pipeline */}
-        <div className="xl:col-span-3 overflow-x-auto pb-4 pt-1">
-          <div className="flex items-stretch space-x-3 min-w-max">
-            {nodes.map((node, index) => {
-              const isSelected = selectedNodeId === node.id;
-              const hasNext = index < nodes.length - 1;
-              const isCompleted = node.status === 'completed';
-              const isAvailable = node.status === 'available';
-              const isLocked = node.status === 'locked';
-
-              const dept = node.department || node.dept;
-              const time = node.estimatedDays || node.time;
-              const url = node.officialUrl || node.url;
-              const prereqs = node.prerequisites || node.prereqs || [];
-
-              // Domain extraction
-              let domain = 'gov.in';
-              if (url) {
-                try {
-                  domain = new URL(url).hostname;
-                } catch {
-                  domain = 'gov.in';
-                }
-              }
-
-              // Card styling exactly matching reference image
-              let cardClasses = 'border-[#e2e4e8] bg-zinc-50/70 hover:bg-zinc-100/70';
-              let badgeClasses = 'bg-zinc-200 text-zinc-700';
-              let badgeText = `${index + 1}. Blocked`;
-
-              if (isCompleted) {
-                cardClasses = 'border-emerald-400 bg-emerald-50/20 hover:bg-emerald-50/40';
-                badgeClasses = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
-                badgeText = `${index + 1}. Complete`;
-              } else if (isAvailable) {
-                cardClasses = 'border-blue-500 bg-blue-50/20 hover:bg-blue-50/40 ring-1 ring-blue-500/30';
-                badgeClasses = 'bg-blue-100 text-blue-800 border border-blue-200';
-                badgeText = `${index + 1}. Ready`;
-              }
-
-              return (
-                <React.Fragment key={node.id}>
-                  {/* Individual Milestone Card */}
-                  <div
-                    onClick={() => onSelectNode(node.id)}
-                    className={`w-52 sm:w-56 p-4 rounded-xl border flex flex-col justify-between transition-all cursor-pointer shadow-xs ${cardClasses} ${
-                      isSelected ? 'ring-2 ring-blue-600 scale-[1.02] shadow-sm' : ''
-                    }`}
-                  >
-                    <div>
-                      {/* Top Status Pill */}
-                      <div className="flex items-center justify-between mb-2.5">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClasses}`}>
-                          {badgeText}
-                        </span>
-                        <span className="font-mono-code text-[10px] text-zinc-400">
-                          {node.code}
-                        </span>
-                      </div>
-
-                      {/* Title */}
-                      <h4 className="text-xs font-bold text-zinc-900 leading-snug line-clamp-2">
-                        {index + 1}. {node.title.replace(/\([^)]*\)/g, '').trim()}
-                      </h4>
-
-                      {/* Node Metadata Specs */}
-                      <div className="mt-2.5 space-y-1 text-[11px] text-zinc-600">
-                        {dept && (
-                          <div className="truncate">
-                            <span className="text-zinc-400">Dept:</span> {dept}
-                          </div>
-                        )}
-                        {node.fee && node.fee !== '₹0' && (
-                          <div>
-                            <span className="text-zinc-400">Fee:</span>{' '}
-                            <span className="font-mono-code font-semibold text-zinc-800">{node.fee}</span>
-                          </div>
-                        )}
-                        {time && (
-                          <div>
-                            <span className="text-zinc-400">SLA:</span> {time}
-                          </div>
-                        )}
-                        {url && (
-                          <div className="truncate">
-                            <span className="text-zinc-400">Source:</span>{' '}
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-blue-600 hover:underline font-mono-code text-[10px]"
-                            >
-                              {domain}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Bottom Status / Action */}
-                    <div className="mt-4 pt-2.5 border-t border-zinc-200/70">
-                      {isCompleted ? (
-                        <div className="text-[11px] font-bold text-emerald-700 flex items-center space-x-1">
-                          <span>Status: Completed</span>
-                          <Check className="w-3.5 h-3.5" />
-                        </div>
-                      ) : isAvailable ? (
-                        <div className="space-y-2">
-                          <div className="text-[11px] font-bold text-blue-700">
-                            Status: Ready to File
-                          </div>
-                          {url && (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] rounded-lg shadow-xs flex items-center justify-center space-x-1 transition"
-                            >
-                              <span>Open Official Portal</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-zinc-500 font-medium">
-                          <div className="flex items-center space-x-1">
-                            <span>Status: Locked</span>
-                            <Lock className="w-3 h-3 text-zinc-400" />
-                          </div>
-                          {prereqs.length > 0 && (
-                            <span className="text-[10px] text-zinc-400 font-mono-code">
-                              (Requires: #{prereqs.join(', #')})
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Directional Connector Arrow */}
-                  {hasNext && (
-                    <div className="flex items-center text-zinc-400 font-bold text-lg select-none px-0.5">
-                      →
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* RIGHT 1 COL: Path Summary & Missing Documents Checklist */}
-        <div className="xl:border-l xl:border-[#e2e4e8] xl:pl-6 space-y-5 pt-2">
-          {/* Path Summary */}
-          <div>
-            <h4 className="text-sm font-bold text-zinc-900 border-b border-zinc-100 pb-2">
-              Path Summary
-            </h4>
-            <div className="mt-2.5 space-y-1.5 text-xs text-zinc-600">
-              <div className="flex justify-between">
-                <span>Total Statutory Fees:</span>
-                <span className="font-mono-code font-bold text-zinc-900">{pipeline.totalFee}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Estimated Time:</span>
-                <span className="font-semibold text-zinc-900">{pipeline.cycleTime}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Pipeline Milestones:</span>
-                <span className="font-semibold text-zinc-900">{nodes.length} Steps</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Readiness Score:</span>
-                <span className="font-semibold text-emerald-700">
-                  {Math.round((nodes.filter(n => n.status === 'completed').length / (nodes.length || 1)) * 100)}%
-                </span>
-              </div>
+    <div className="bg-white border border-zinc-200 rounded-2xl shadow-xs overflow-hidden max-w-7xl mx-auto w-full p-5 sm:p-6">
+      {/* Main Responsive 12-Column Grid: Left 8 Canvas + Right 4 Compliance Desk */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT CANVAS (lg:col-span-8): Topological Milestone Pipeline */}
+        <div className="lg:col-span-8 flex flex-col min-w-0">
+          {/* Milestone Pipeline Header */}
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-zinc-200">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+                Topological Milestone Pipeline
+              </h3>
+              <span className="text-[11px] font-semibold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-full border border-zinc-200">
+                {nodes.length} Clearance Stages
+              </span>
+            </div>
+            <div className="flex items-center space-x-2 text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Verified Official Source</span>
             </div>
           </div>
 
-          {/* Missing Documents Checklist */}
-          <div>
-            <h4 className="text-sm font-bold text-zinc-900 border-b border-zinc-100 pb-2">
-              Missing Documents Checklist
-            </h4>
-            <ul className="mt-2.5 space-y-2 text-xs text-zinc-600">
-              {pendingDocs.length > 0 ? (
-                pendingDocs.map((doc, idx) => (
-                  <li key={idx} className="flex items-start space-x-2">
-                    <span className="w-3.5 h-3.5 rounded border border-zinc-300 mt-0.5 shrink-0" />
-                    <span className="text-[11px] leading-snug">{doc}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-[11px] text-emerald-700 font-medium">
-                  ✓ All milestone document enclosures ready!
-                </li>
-              )}
-            </ul>
+          {/* Horizontal Scroll Track Container */}
+          <div className="overflow-x-auto pb-4 pt-1 w-full scrollbar-thin">
+            <div className="flex items-stretch space-x-2.5 min-w-max">
+              {nodes.map((node, index) => {
+                const isSelected = selectedNodeId === node.id;
+                const hasNext = index < nodes.length - 1;
+                const isCompleted = node.status === 'completed';
+                const isAvailable = node.status === 'available';
+                const isLocked = node.status === 'locked';
+
+                const dept = node.department || node.dept;
+                const time = node.estimatedDays || node.time;
+                const url = node.officialUrl || node.url;
+                const prereqs = node.prerequisites || node.prereqs || [];
+
+                // Domain extraction
+                let domain = 'gov.in';
+                if (url) {
+                  try {
+                    domain = new URL(url).hostname;
+                  } catch {
+                    domain = 'gov.in';
+                  }
+                }
+
+                // Card styling
+                let cardClasses = 'border-zinc-200 bg-zinc-50/70 hover:bg-zinc-100/70';
+                if (isCompleted) {
+                  cardClasses = 'border-emerald-300 bg-emerald-50/20 hover:bg-emerald-50/40';
+                } else if (isAvailable) {
+                  cardClasses = 'border-blue-400 bg-blue-50/20 hover:bg-blue-50/40 ring-1 ring-blue-500/20';
+                }
+
+                return (
+                  <React.Fragment key={node.id}>
+                    {/* Individual Milestone Card with Explicit min-w to eliminate clipping */}
+                    <div
+                      onClick={() => onSelectNode(node.id)}
+                      className={`min-w-[220px] w-60 flex-shrink-0 p-4 rounded-xl border flex flex-col justify-between transition-all cursor-pointer shadow-xs ${cardClasses} ${
+                        isSelected ? 'ring-2 ring-blue-600 scale-[1.01] shadow-sm' : ''
+                      }`}
+                    >
+                      <div>
+                        {/* Top Concrete Status Badge */}
+                        <div className="flex items-center justify-between mb-2.5">
+                          {isCompleted ? (
+                            <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 fill-emerald-100" />
+                              <span>{index + 1}. Satisfied</span>
+                            </span>
+                          ) : isAvailable ? (
+                            <span className="inline-flex items-center space-x-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
+                              </span>
+                              <span>{index + 1}. Ready to File</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
+                              <Lock className="w-2.5 h-2.5 text-zinc-400" />
+                              <span>{index + 1}. Locked</span>
+                            </span>
+                          )}
+
+                          <span className="font-mono-code text-[10px] text-zinc-400 bg-white px-1.5 py-0.5 rounded border border-zinc-200">
+                            {node.code}
+                          </span>
+                        </div>
+
+                        {/* Title - Allowed to wrap naturally without mid-word truncation */}
+                        <h4 className="min-h-[38px] text-xs font-bold text-zinc-900 leading-snug break-words">
+                          {index + 1}. {node.title.replace(/\([^)]*\)/g, '').trim()}
+                        </h4>
+
+                        {/* Node Metadata Specs */}
+                        <div className="mt-2.5 space-y-1 text-[11px] text-zinc-600">
+                          {dept && (
+                            <div className="break-words leading-tight">
+                              <span className="text-zinc-400 font-medium">Dept:</span> {dept}
+                            </div>
+                          )}
+                          {node.fee && node.fee !== '₹0' && (
+                            <div>
+                              <span className="text-zinc-400 font-medium">Fee:</span>{' '}
+                              <span className="font-mono-code font-semibold text-zinc-800">{node.fee}</span>
+                            </div>
+                          )}
+                          {time && (
+                            <div>
+                              <span className="text-zinc-400 font-medium">SLA:</span> {time}
+                            </div>
+                          )}
+                          {url && (
+                            <div className="truncate">
+                              <span className="text-zinc-400 font-medium">Source:</span>{' '}
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 hover:underline font-mono-code text-[10px]"
+                              >
+                                {domain}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Status / Action */}
+                      <div className="mt-4 pt-2.5 border-t border-zinc-200/80">
+                        {isCompleted ? (
+                          <div className="text-[11px] font-bold text-emerald-700 flex items-center space-x-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
+                            <span>Satisfied &amp; Certified</span>
+                          </div>
+                        ) : isAvailable ? (
+                          <div className="space-y-2">
+                            <div className="text-[11px] font-bold text-blue-700 flex items-center space-x-1.5">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                              </span>
+                              <span>Ready to File</span>
+                            </div>
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] rounded-lg shadow-xs flex items-center justify-center space-x-1 transition"
+                              >
+                                <span>Open Official Portal</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-zinc-500 font-medium">
+                            <div className="flex items-center space-x-1.5">
+                              <Lock className="w-3 h-3 text-zinc-400" />
+                              <span>Locked (Prereqs Pending)</span>
+                            </div>
+                            {prereqs.length > 0 && (
+                              <span className="text-[10px] text-zinc-400 font-mono-code block mt-0.5">
+                                Requires: #{prereqs.join(', #')}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Continuous SVG Track Connector Rail */}
+                    {hasNext && (
+                      <div className="flex items-center justify-center px-1 self-center shrink-0">
+                        <div className="flex items-center">
+                          <div className={`h-0.5 w-3 sm:w-4 ${isCompleted ? 'bg-emerald-400' : 'bg-zinc-200'}`} />
+                          <svg className={`w-3.5 h-3.5 -ml-1 ${isCompleted ? 'text-emerald-500' : 'text-zinc-300'}`} viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT CANVAS (lg:col-span-4): Compliance Docket & Physical Enclosures Desk */}
+        <div className="lg:col-span-4 lg:border-l lg:border-zinc-200 lg:pl-6 space-y-4 pt-1">
+          {/* Desk Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-200">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 flex items-center space-x-1.5">
+                <FileCheck className="w-4 h-4 text-blue-600" />
+                <span>Compliance Docket &amp; Enclosures Desk</span>
+              </h4>
+              <p className="text-[11px] text-zinc-500 mt-0.5">
+                Mandatory physical counter submissions for ward clearance
+              </p>
+            </div>
           </div>
 
-          {/* Download Action Docket Button */}
+          {/* Physical Enclosures & Affidavits Checklist */}
+          <div className="space-y-2.5">
+            <span className="text-[10px] uppercase font-bold text-zinc-400 block tracking-wider">
+              Required Physical Enclosures
+            </span>
+
+            {/* Standard Institutional Affidavits */}
+            {standardEnclosures.map((item) => {
+              const isChecked = !!checkedEnclosures[item.id];
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleEnclosure(item.id)}
+                  className={`p-3 rounded-xl border transition cursor-pointer flex items-start space-x-2.5 ${
+                    isChecked
+                      ? 'bg-emerald-50/40 border-emerald-200'
+                      : 'bg-zinc-50/80 border-zinc-200 hover:bg-zinc-100/70'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center border shrink-0 transition ${
+                    isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-zinc-300 bg-white'
+                  }`}>
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`text-xs font-semibold leading-tight ${
+                      isChecked ? 'text-zinc-500 line-through' : 'text-zinc-900'
+                    }`}>
+                      {item.title}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5 leading-snug">
+                      {item.desc}
+                    </div>
+                    <div className="mt-1 flex items-center space-x-1.5">
+                      <span className="text-[9px] font-mono-code font-bold uppercase px-1.5 py-0.2 rounded bg-white border border-zinc-200 text-zinc-600">
+                        {item.requiredOriginal ? 'Original + 1 Copy' : 'Self-Attested Copy'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Pipeline-Specific Document Enclosures */}
+            {pipelineDocs.map((doc, idx) => {
+              const docKey = `doc_${idx}`;
+              const isChecked = !!checkedEnclosures[docKey];
+              return (
+                <div
+                  key={docKey}
+                  onClick={() => toggleEnclosure(docKey)}
+                  className={`p-3 rounded-xl border transition cursor-pointer flex items-start space-x-2.5 ${
+                    isChecked
+                      ? 'bg-emerald-50/40 border-emerald-200'
+                      : 'bg-zinc-50/80 border-zinc-200 hover:bg-zinc-100/70'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center border shrink-0 transition ${
+                    isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-zinc-300 bg-white'
+                  }`}>
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`text-xs font-semibold leading-tight ${
+                      isChecked ? 'text-zinc-500 line-through' : 'text-zinc-900'
+                    }`}>
+                      {doc}
+                    </div>
+                    <div className="mt-1 flex items-center space-x-1.5">
+                      <span className="text-[9px] font-mono-code font-bold uppercase px-1.5 py-0.2 rounded bg-white border border-zinc-200 text-zinc-600">
+                        Stage Enclosure
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Institutional Counter Verification Notice */}
+          <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl space-y-1 text-xs">
+            <div className="flex items-center space-x-1.5 text-zinc-800 font-semibold">
+              <Building2 className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Ward CFC Scrutiny Desk</span>
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Inward scrutiny conducted at Citizen Facilitation Center (Counter 4). Verify physical seal impressions prior to token generation.
+            </p>
+          </div>
+
+          {/* Primary Action Button: Download Citizen Action Docket */}
           <div className="pt-2">
             <button
               onClick={onExportDocket}
-              className="w-full py-2.5 px-3 bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-800 font-semibold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-1.5"
+              className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 active:bg-black text-white font-semibold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2"
+              title="Generate and print physical compliance action docket"
             >
-              <FileText className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Download Print-Ready Action Docket</span>
+              <FileText className="w-3.5 h-3.5 text-zinc-300" />
+              <span>Download Citizen Action Docket</span>
             </button>
           </div>
         </div>

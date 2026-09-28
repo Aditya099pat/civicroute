@@ -22,7 +22,7 @@ export default function Header({
     <header className="bg-white border-b border-[#e2e4e8] px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs sticky top-0 z-30">
       {/* Left: Brand Identity & Municipal Scope */}
       <div className="flex items-center space-x-3.5">
-        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-xs shrink-0 ring-1 ring-zinc-300 bg-[#070d19] flex items-center justify-center p-0.5">
+        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-zinc-200 bg-zinc-50 flex items-center justify-center p-1">
           <img
             src="/logo.png"
             alt="CivicRoute Logo"
@@ -96,17 +96,17 @@ export default function Header({
 
       {/* Right: Clean, Polished Action Buttons */}
       <div className="flex items-center space-x-2.5 self-end md:self-center">
-        {/* Citizen Docket Print Button */}
+        {/* Citizen Docket Print Button - Clean Slate/Zinc Outline */}
         <button
           onClick={onExportDocket}
-          className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-700 bg-white hover:bg-zinc-50 border border-[#e2e4e8] hover:border-zinc-300 shadow-xs transition"
+          className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-700 bg-white hover:bg-zinc-50 border border-zinc-300 hover:border-zinc-400 shadow-xs transition"
           title="Print high-contrast compliance docket for in-person municipal ward counters"
         >
           <Printer className="w-3.5 h-3.5 text-zinc-500" />
           <span>Citizen Action Docket</span>
         </button>
 
-        {/* Steward & Admin Portal Button */}
+        {/* Steward & Admin Portal Button - Sleek Dark Zinc-900 Badge */}
         <button
           onClick={onOpenAdmin}
           className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 shadow-xs transition"
