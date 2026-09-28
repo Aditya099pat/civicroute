@@ -1,17 +1,27 @@
 import React, { useState } from 'react';
-import { Lock, ShieldCheck, ExternalLink, FileText, CheckCircle2, ChevronRight, FileCheck, Building2, Check } from 'lucide-react';
+import { Lock, ShieldCheck, ExternalLink, FileText, FileDown, Share2, CheckCircle2, FileCheck, Building2, Check } from 'lucide-react';
+import VerificationBadge from './VerificationBadge';
+import DocumentVault from './DocumentVault';
 
 export default function MilestoneCanvas({
   pipeline,
   nodes = [],
   selectedNodeId,
   onSelectNode,
-  onToggleNode,
-  onExportDocket
+  onExportDocket,
+  onExportPdf,
+  onShare,
+  verification
 }) {
   const [checkedEnclosures, setCheckedEnclosures] = useState({});
 
   if (!pipeline) return null;
+
+  // Summarize live verification for the header badge.
+  const verifyState = verification?.state;
+  const verifiedCount = verification
+    ? nodes.filter((n) => verification.results[n.officialUrl || n.url]?.verified).length
+    : 0;
 
   const toggleEnclosure = (key) => {
     setCheckedEnclosures(prev => ({
@@ -19,12 +29,6 @@ export default function MilestoneCanvas({
       [key]: !prev[key]
     }));
   };
-
-  // Extract pipeline-specific documents
-  const pipelineDocs = nodes
-    .flatMap(n => n.documentsRequired || n.docs || [])
-    .filter((doc, idx, arr) => arr.indexOf(doc) === idx)
-    .slice(0, 3);
 
   // Standard mandatory physical compliance enclosures for municipal submission
   const standardEnclosures = [
@@ -193,17 +197,20 @@ export default function MilestoneCanvas({
               </div>
             )}
             {url && (
-              <div className="truncate">
-                <span className="text-zinc-400 dark:text-zinc-500 font-medium">Source:</span>{' '}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-zinc-400 dark:text-zinc-500 font-medium shrink-0">Source:</span>
                 <a
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-mono-code text-[10px]"
+                  className="text-blue-600 dark:text-blue-400 hover:underline font-mono-code text-[10px] truncate"
                 >
                   {domain}
                 </a>
+                {verification && (
+                  <VerificationBadge status={verification.statusFor(url)} className="shrink-0" />
+                )}
               </div>
             )}
           </div>
@@ -272,9 +279,20 @@ export default function MilestoneCanvas({
                 {nodes.length} Clearance Stages
               </span>
             </div>
-            <div className="flex items-center space-x-2 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/70 px-2.5 py-0.5 rounded-full shrink-0">
+            <div
+              className="flex items-center space-x-2 text-[11px] font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 px-2.5 py-0.5 rounded-full shrink-0"
+              title="Official portal links are live-checked against government domains"
+            >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Verified Official Source</span>
+              <span>
+                {verifyState === 'verifying'
+                  ? 'Checking official sources…'
+                  : verifyState === 'unavailable'
+                  ? 'Sources not checked (offline)'
+                  : verifyState === 'done'
+                  ? `${verifiedCount}/${nodes.length} portals reachable`
+                  : 'Official portal links'}
+              </span>
             </div>
           </div>
 
@@ -458,40 +476,11 @@ export default function MilestoneCanvas({
               );
             })}
 
-            {/* Pipeline-Specific Document Enclosures */}
-            {pipelineDocs.map((doc, idx) => {
-              const docKey = `doc_${idx}`;
-              const isChecked = !!checkedEnclosures[docKey];
-              return (
-                <div
-                  key={docKey}
-                  onClick={() => toggleEnclosure(docKey)}
-                  className={`p-3 rounded-xl border transition cursor-pointer flex items-start space-x-2.5 ${
-                    isChecked
-                      ? 'bg-emerald-50/40 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
-                      : 'bg-zinc-50/80 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/70'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center border shrink-0 transition ${
-                    isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800'
-                  }`}>
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className={`text-xs font-semibold leading-tight ${
-                      isChecked ? 'text-zinc-500 dark:text-zinc-500 line-through' : 'text-zinc-900 dark:text-zinc-100'
-                    }`}>
-                      {doc}
-                    </div>
-                    <div className="mt-1 flex items-center space-x-1.5">
-                      <span className="text-[9px] font-mono-code font-bold uppercase px-1.5 py-0.2 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
-                        Stage Enclosure
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          </div>
+
+          {/* Unified Document Vault: every required doc across the pathway, deduped */}
+          <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800">
+            <DocumentVault pipeline={pipeline} />
           </div>
 
           {/* Institutional Counter Verification Notice */}
@@ -505,16 +494,38 @@ export default function MilestoneCanvas({
             </p>
           </div>
 
-          {/* Primary Action Button: Download Citizen Action Docket */}
-          <div className="pt-2">
+          {/* Primary Actions: Print docket, Download PDF, Share */}
+          <div className="pt-2 space-y-2">
             <button
               onClick={onExportDocket}
               className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 dark:bg-blue-600 dark:hover:bg-blue-500 active:bg-black text-white font-semibold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2"
-              title="Generate and print physical compliance action docket"
+              title="Print the physical compliance action docket"
             >
               <FileText className="w-3.5 h-3.5 text-zinc-300 dark:text-white" />
-              <span>Download Citizen Action Docket</span>
+              <span>Print Citizen Action Docket</span>
             </button>
+            <div className="grid grid-cols-2 gap-2">
+              {onExportPdf && (
+                <button
+                  onClick={onExportPdf}
+                  className="py-2 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 font-semibold text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 shadow-xs transition flex items-center justify-center space-x-1.5"
+                  title="Download the docket as a PDF file"
+                >
+                  <FileDown className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                  <span>PDF</span>
+                </button>
+              )}
+              {onShare && (
+                <button
+                  onClick={onShare}
+                  className="py-2 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 font-semibold text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 shadow-xs transition flex items-center justify-center space-x-1.5"
+                  title="Copy a shareable link with your progress"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                  <span>Share</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

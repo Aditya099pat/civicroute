@@ -1,6 +1,7 @@
 import React from 'react';
 
-export default function Footer({ onOpenAdmin }) {
+export default function Footer({ onOpenAdmin, onNotify }) {
+  const notify = (msg) => (onNotify ? onNotify(msg, 'info') : undefined);
   return (
     <footer className="mt-auto border-t border-[#e2e4e8] dark:border-zinc-800 bg-white dark:bg-zinc-900 py-4 px-6 lg:px-8 text-xs text-zinc-500 dark:text-zinc-400 transition-colors">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
@@ -20,7 +21,7 @@ export default function Footer({ onOpenAdmin }) {
             href="#about"
             onClick={(e) => {
               e.preventDefault();
-              alert("CivicRoute: Enterprise civic-tech navigator for municipal clearance roadmaps and verified government endpoints.");
+              notify('CivicRoute is an independent civic-tech project that maps municipal clearance roadmaps and links to official government portals.');
             }}
             className="hover:text-zinc-900 dark:hover:text-zinc-200 transition"
           >
@@ -28,46 +29,33 @@ export default function Footer({ onOpenAdmin }) {
           </a>
           <span className="text-zinc-300 dark:text-zinc-700">•</span>
           <a
-            href="#portals"
-            onClick={(e) => {
-              e.preventDefault();
-              alert("Verified Government Gateways: aaplesarkar.mahaonline.gov.in, portal.mcgm.gov.in, foscos.fssai.gov.in, incometax.gov.in");
-            }}
+            href="https://aaplesarkar.mahaonline.gov.in"
+            target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-zinc-900 dark:hover:text-zinc-200 transition"
           >
-            Official Portals Directory
+            Official Portals
           </a>
           <span className="text-zinc-300 dark:text-zinc-700">•</span>
           <button onClick={onOpenAdmin} className="hover:text-zinc-900 dark:hover:text-zinc-200 transition">
-            Clerk Gazette Audit
+            Steward Console
           </button>
-          <span className="text-zinc-300 dark:text-zinc-700">•</span>
-          <a
-            href="#contact"
-            onClick={(e) => {
-              e.preventDefault();
-              alert("Citizen Helpdesk: MCGM Right to Services Helpdesk (Toll Free 1800-22-1234) • civicroute@gov.in");
-            }}
-            className="hover:text-zinc-900 dark:hover:text-zinc-200 transition"
-          >
-            Contact Helpdesk
-          </a>
           <span className="text-zinc-300 dark:text-zinc-700">•</span>
           <a
             href="#privacy"
             onClick={(e) => {
               e.preventDefault();
-              alert("Data Governance: Zero PII retained on public client. Compliant with Digital Personal Data Protection Act (DPDPA 2023).");
+              notify('Privacy: your progress is stored only in your own browser (localStorage). No personal data is sent to CivicRoute servers.');
             }}
             className="hover:text-zinc-900 dark:hover:text-zinc-200 transition"
           >
-            Privacy Policy
+            Privacy
           </a>
         </div>
 
-        {/* Right: Statutory Attribution */}
+        {/* Right: Honest attribution */}
         <div className="text-zinc-400 dark:text-zinc-500 text-[11px] whitespace-nowrap">
-          Government of Maharashtra • RTS Act 2015
+          Independent civic-tech project • References RTS Act 2015
         </div>
       </div>
     </footer>

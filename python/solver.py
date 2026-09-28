@@ -12,11 +12,16 @@ class CivicDependencyEngine:
         self.in_degree = defaultdict(int)
         self._build_graph()
 
+    @staticmethod
+    def _prereqs(node):
+        # Support both the current "prerequisites" key and the legacy "prereqs".
+        return node.get("prerequisites", node.get("prereqs", []))
+
     def _build_graph(self):
         for node_id, node in self.nodes.items():
             if node_id not in self.in_degree:
                 self.in_degree[node_id] = 0
-            for prereq in node.get("prereqs", []):
+            for prereq in self._prereqs(node):
                 self.graph[prereq].append(node_id)
                 self.in_degree[node_id] += 1
 
@@ -41,18 +46,18 @@ class CivicDependencyEngine:
         for node_id, node in self.nodes.items():
             if node_id in completed_ids:
                 continue
-            prereqs = set(node.get("prereqs", []))
+            prereqs = set(self._prereqs(node))
             if prereqs.issubset(completed_ids):
                 ready.append(node_id)
         return ready
 
 if __name__ == "__main__":
     sample_nodes = [
-        {"id": "1", "title": "Aadhaar / PAN Identity", "prereqs": []},
-        {"id": "2", "title": "Gumasta Shop License", "prereqs": ["1"]},
-        {"id": "3", "title": "Fire NOC", "prereqs": ["2"]},
-        {"id": "4", "title": "FSSAI Food License", "prereqs": ["2"]},
-        {"id": "5", "title": "Health Trade License", "prereqs": ["3", "4"]}
+        {"id": "1", "title": "Aadhaar / PAN Identity", "prerequisites": []},
+        {"id": "2", "title": "Gumasta Shop License", "prerequisites": ["1"]},
+        {"id": "3", "title": "Fire NOC", "prerequisites": ["2"]},
+        {"id": "4", "title": "FSSAI Food License", "prerequisites": ["2"]},
+        {"id": "5", "title": "Health Trade License", "prerequisites": ["3", "4"]}
     ]
     solver = CivicDependencyEngine(sample_nodes)
     print("Topological Clearance Order:", solver.topological_sort())

@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, X, Shield, Key, ArrowRight, ShieldCheck, CheckCircle2, Globe, FileText, Edit3, Save } from 'lucide-react';
+import VerificationBadge from './VerificationBadge';
 
 export default function AdminModal({
   isOpen,
   onClose,
   onElevateRole,
   activePipeline,
-  onUpdatePipelineNode
+  onUpdatePipelineNode,
+  verification
 }) {
   const [activeTab, setActiveTab] = useState('auth'); // 'auth' | 'url_audit' | 'fee_revision'
   const [scope, setScope] = useState('steward');
@@ -16,6 +18,13 @@ export default function AdminModal({
   const [editFee, setEditFee] = useState('');
   const [editSla, setEditSla] = useState('');
   const [saveNotice, setSaveNotice] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -49,8 +58,17 @@ export default function AdminModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-zinc-900/60 dark:bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-2xl w-full border border-[#e2e4e8] dark:border-zinc-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 bg-zinc-900/60 dark:bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Municipal Clerk and Data Steward Portal"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-zinc-900 rounded-2xl max-w-2xl w-full border border-[#e2e4e8] dark:border-zinc-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[#e2e4e8] dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50">
           <div className="flex items-center space-x-3">
@@ -219,38 +237,48 @@ export default function AdminModal({
                   Active pipeline: {activePipeline?.title} ({activePipeline?.id})
                 </p>
               </div>
-              <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded">
-                100% .gov.in Verified
+              <span className="text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded">
+                {verification?.state === 'verifying'
+                  ? 'Checking…'
+                  : verification?.state === 'unavailable'
+                  ? 'Live check offline'
+                  : 'Live-checked'}
               </span>
             </div>
 
-            {activePipeline?.nodes?.map((node) => (
-              <div
-                key={node.id}
-                className="p-3.5 rounded-xl border border-[#e2e4e8] dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono-code text-[10px] font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
-                    {node.code}
-                  </span>
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                    <span>SSL TLS 1.3 Certified</span>
-                  </span>
-                </div>
+            {activePipeline?.nodes?.map((node) => {
+              const url = node.officialUrl || node.url;
+              const status = verification && url ? verification.statusFor(url) : null;
+              const detail = status?.detail;
+              return (
+                <div
+                  key={node.id}
+                  className="p-3.5 rounded-xl border border-[#e2e4e8] dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono-code text-[10px] font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
+                      {node.code}
+                    </span>
+                    {status ? (
+                      <VerificationBadge status={status} />
+                    ) : (
+                      <span className="text-[10px] text-zinc-400">Not checked</span>
+                    )}
+                  </div>
 
-                <div className="font-bold text-zinc-900 dark:text-zinc-100">{node.title}</div>
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100">{node.title}</div>
 
-                <div className="flex items-center justify-between pt-1 text-[11px]">
-                  <span className="font-mono-code text-blue-700 dark:text-blue-400 truncate max-w-[340px]">
-                    {node.officialUrl || node.url}
-                  </span>
-                  <span className="font-mono-code text-zinc-500 dark:text-zinc-400">
-                    {node.gazetteCode || 'GOV-IN-VERIFIED'}
-                  </span>
+                  <div className="flex items-center justify-between pt-1 text-[11px] gap-2">
+                    <span className="font-mono-code text-blue-700 dark:text-blue-400 truncate max-w-[340px]">
+                      {url}
+                    </span>
+                    <span className="font-mono-code text-zinc-500 dark:text-zinc-400 shrink-0">
+                      {detail?.tls?.protocol || (detail?.statusCode ? `HTTP ${detail.statusCode}` : '—')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

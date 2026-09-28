@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import MilestoneCanvas from './MilestoneCanvas';
 import MilestoneTree from './MilestoneTree';
-import { Layers, List, GitFork, CheckCircle2, Lock, ChevronRight } from 'lucide-react';
+import TimelineView from './TimelineView';
+import Segmented from './ui/Segmented';
+import { Map, List, GitFork, CalendarClock, CheckCircle2, Lock, ChevronRight } from 'lucide-react';
+
+const VIEW_OPTIONS = [
+  { value: 'horizontal', label: 'Roadmap', icon: Map },
+  { value: 'timeline', label: 'Timeline', icon: CalendarClock },
+  { value: 'list', label: 'Tabular', icon: List },
+  { value: 'tree', label: 'DAG', icon: GitFork },
+];
 
 export default function MilestoneList({
   pipeline,
@@ -10,6 +19,9 @@ export default function MilestoneList({
   onSelectNode,
   onToggleNode,
   onExportDocket,
+  onExportPdf,
+  onShare,
+  verification,
   onResetPipeline
 }) {
   const [viewMode, setViewMode] = useState('horizontal'); // 'horizontal' | 'list' | 'tree'
@@ -34,40 +46,7 @@ export default function MilestoneList({
           )}
         </div>
 
-        <div className="flex items-center space-x-1 bg-white dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xs text-xs">
-          <button
-            onClick={() => setViewMode('horizontal')}
-            className={`px-3 py-1 font-semibold rounded-md transition ${
-              viewMode === 'horizontal'
-                ? 'bg-zinc-900 dark:bg-blue-600 text-white'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-            }`}
-          >
-            Horizontal Roadmap
-          </button>
-
-          <button
-            onClick={() => setViewMode('list')}
-            className={`px-3 py-1 font-semibold rounded-md transition ${
-              viewMode === 'list'
-                ? 'bg-zinc-900 dark:bg-blue-600 text-white'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-            }`}
-          >
-            Tabular List
-          </button>
-
-          <button
-            onClick={() => setViewMode('tree')}
-            className={`px-3 py-1 font-semibold rounded-md transition ${
-              viewMode === 'tree'
-                ? 'bg-zinc-900 dark:bg-blue-600 text-white'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-            }`}
-          >
-            DAG Graph
-          </button>
-        </div>
+        <Segmented options={VIEW_OPTIONS} value={viewMode} onChange={setViewMode} />
       </div>
 
       {viewMode === 'horizontal' && (
@@ -78,7 +57,14 @@ export default function MilestoneList({
           onSelectNode={onSelectNode}
           onToggleNode={onToggleNode}
           onExportDocket={onExportDocket}
+          onExportPdf={onExportPdf}
+          onShare={onShare}
+          verification={verification}
         />
+      )}
+
+      {viewMode === 'timeline' && (
+        <TimelineView nodes={nodes} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
       )}
 
       {viewMode === 'tree' && (
@@ -88,6 +74,7 @@ export default function MilestoneList({
             selectedNodeId={selectedNodeId}
             onSelectNode={onSelectNode}
             onToggleNode={onToggleNode}
+            verification={verification}
           />
         </div>
       )}

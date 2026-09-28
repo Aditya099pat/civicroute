@@ -7,13 +7,37 @@ import StepDrawer from './components/StepDrawer';
 import AdminModal from './components/AdminModal';
 import PrintDocket from './components/PrintDocket';
 import Footer from './components/Footer';
-import { INITIAL_PIPELINES, searchOrSynthesizePipeline } from './data/pipelines';
-import { resolveDAG, calculateReadiness } from './utils/dagResolver';
-import { printComplianceDocket } from './utils/printUtils';
-import { Loader2 } from 'lucide-react';
+import ToastStack from './components/ToastStack';
+import EligibilityWizard from './components/EligibilityWizard';
+import { INITIAL_PIPELINES } from './data/pipelines';
+import { resolveDAG, calculateReadiness, resolveDependencies } from './utils/dagResolver';
+import { fetchBureaucracyPath } from './utils/api';
+import { printComplianceDocket, downloadComplianceDocketPdf } from './utils/printUtils';
+import { buildShareUrl, parseShareState } from './utils/shareState';
+import { resolveLocation } from './data/jurisdictions';
+import { useToasts } from './hooks/useToasts';
+import { useVerification } from './hooks/useVerification';
+import { Loader2, Sparkles, X } from 'lucide-react';
 import './App.css';
 import './styles/variables.css';
 import './styles/animations.css';
+
+// Keep at most this many synthesized (dyn_*) pipelines in localStorage so the
+// store cannot grow without bound across many searches.
+const MAX_DYNAMIC_PIPELINES = 8;
+
+function pruneDynamicPipelines(pipelines) {
+  const dynamicKeys = Object.keys(pipelines)
+    .filter((k) => k.startsWith('dyn_'))
+    .sort((a, b) => Number(b.split('_')[1] || 0) - Number(a.split('_')[1] || 0));
+  if (dynamicKeys.length <= MAX_DYNAMIC_PIPELINES) return pipelines;
+  const keep = new Set(dynamicKeys.slice(0, MAX_DYNAMIC_PIPELINES));
+  const next = {};
+  for (const [key, value] of Object.entries(pipelines)) {
+    if (!key.startsWith('dyn_') || keep.has(key)) next[key] = value;
+  }
+  return next;
+}
 
 /**
  * Main CivicRoute Application Component
@@ -58,6 +82,14 @@ export default function App() {
     }
   });
 
+  const [selectedCity, setSelectedCity] = useState(() => {
+    try {
+      return localStorage.getItem('civicroute_selected_city') || 'mumbai';
+    } catch {
+      return 'mumbai';
+    }
+  });
+
   // Dark/Light Theme state with LocalStorage persistence and system preference fallback
   const [theme, setTheme] = useState(() => {
     try {
@@ -90,7 +122,14 @@ export default function App() {
   };
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [notification, setNotification] = useState(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [eligibility, setEligibility] = useState(null); // { summary, nodeNotes }
+  const { toasts, notify, dismiss } = useToasts();
+
+  // Clear personalization when the active pathway changes.
+  useEffect(() => {
+    setEligibility(null);
+  }, [activeKey]);
 
   const [activeSearchQuery, setActiveSearchQuery] = useState(() => {
     try {
@@ -155,6 +194,14 @@ export default function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('civicroute_selected_city', selectedCity);
+    } catch (e) {
+      console.warn("Failed to save selectedCity:", e);
+    }
+  }, [selectedCity]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('civicroute_is_dynamic', String(isDynamicRoute));
     } catch (e) {
       console.warn("Failed to save isDynamicRoute:", e);
@@ -166,13 +213,11 @@ export default function App() {
   const readiness = activePipeline ? calculateReadiness(activePipeline.nodes || []) : { percentage: 0 };
   const selectedNode = activePipeline?.nodes.find((n) => n.id === selectedNodeId) || null;
 
-  // Helper: Toast Notifications
-  const showNotification = (msg) => {
-    setNotification(msg);
-    setTimeout(() => {
-      setNotification(null);
-    }, 4500);
-  };
+  // Live, honest verification of official portal URLs for the active pipeline.
+  const verification = useVerification(activePipeline?.nodes || []);
+
+  // Helper: Toast Notifications (stackable)
+  const showNotification = (msg, type = 'info') => notify(msg, type);
 
   // Handler: Search-first intent processing via live backend API with failover fallback
   const handleSearchIntent = async (query) => {
@@ -187,68 +232,33 @@ export default function App() {
       setLoadingStatus('Parsing prerequisites and compiling directed dependency graph...');
     }, 900);
 
-    try {
-      // 1. Attempt live API resolution
-      const response = await fetch('http://localhost:5000/api/generate-path', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          location: selectedWard === 'k_west' ? 'Mumbai (MCGM Ward K-West)' : 'Mumbai, Maharashtra'
-        })
-      });
+    const location = resolveLocation(selectedCity, selectedWard);
 
+    try {
+      const { pipeline, isOfflineFallback, matchKey, isDynamic } =
+        await fetchBureaucracyPath(query, location);
       clearTimeout(stepTimer);
 
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}`);
+      // Offline fallback that matched a verified seed: reuse its stable key.
+      if (isOfflineFallback && matchKey && !isDynamic) {
+        setActiveKey(matchKey);
+        setIsDynamicRoute(false);
+        showNotification(`Identified Verified Municipal Pipeline: ${pipeline.title}`, 'success');
+        return;
       }
 
-      const data = await response.json();
       const generatedKey = `dyn_${Date.now()}`;
-
-      // Structure synthesized backend output into pipeline state
-      const synthesizedPipeline = {
-        id: data.nodes?.[0]?.code || 'CIV-LIVE',
-        title: data.task || query,
-        jurisdiction: data.jurisdiction || 'Mumbai Municipal Corporation (MCGM)',
-        totalFee: data.totalFee || 'Statutory Fee Schedule Attached',
-        primaryDept: data.nodes?.[0]?.department || 'Municipal Facilitation Desk',
-        cycleTime: '14 - 21 Business Days',
-        nodes: data.nodes || [],
-        edges: data.edges || []
-      };
-
-      setPipelines((prev) => ({
-        [generatedKey]: synthesizedPipeline,
-        ...prev
-      }));
+      setPipelines((prev) => pruneDynamicPipelines({ [generatedKey]: pipeline, ...prev }));
       setActiveKey(generatedKey);
       setIsDynamicRoute(true);
-      showNotification(`Live Engine Resolved: Compiled clearance roadmap for "${query}"`);
-
-    } catch (err) {
-      clearTimeout(stepTimer);
-      console.warn(`Backend unreachable (${err.message}). Using local synthesized pipeline.`);
-
-      // 2. Safe Fallback to local verified definitions
-      const result = searchOrSynthesizePipeline(query, pipelines);
-      if (result) {
-        if (result.isDynamic) {
-          setPipelines((prev) => ({
-            [result.key]: result.pipeline,
-            ...prev
-          }));
-          setActiveKey(result.key);
-          setIsDynamicRoute(true);
-          showNotification(`Cached Engine: Synthesized clearance roadmap for "${query}"`);
-        } else {
-          setActiveKey(result.key);
-          setIsDynamicRoute(false);
-          showNotification(`Identified Verified Municipal Pipeline: ${result.pipeline.title}`);
-        }
-      }
+      showNotification(
+        isOfflineFallback
+          ? `Offline Engine: Synthesized clearance roadmap for "${query}"`
+          : `Live Engine Resolved: Compiled clearance roadmap for "${query}"`,
+        'success'
+      );
     } finally {
+      clearTimeout(stepTimer);
       setIsLoading(false);
       setLoadingStatus('');
     }
@@ -317,30 +327,96 @@ export default function App() {
     );
   };
 
+  // Handler: Export the docket (print) with an active-pipeline guard.
+  const handleExportDocket = () => {
+    if (activePipeline) printComplianceDocket();
+    else showNotification('Select a municipal pathway first to export a citizen docket.', 'warn');
+  };
+
+  // Handler: Download the docket as a real PDF file.
+  const handleExportPdf = async () => {
+    if (!activePipeline) {
+      showNotification('Select a municipal pathway first to export a citizen docket.', 'warn');
+      return;
+    }
+    try {
+      await downloadComplianceDocketPdf(`civicroute-docket-${activePipeline.id || 'route'}.pdf`);
+      showNotification('Citizen action docket exported as PDF.', 'success');
+    } catch (err) {
+      console.warn('PDF export failed, falling back to print dialog:', err);
+      printComplianceDocket();
+    }
+  };
+
+  // Handler: Copy a shareable link that restores this pathway + progress.
+  const handleShare = async () => {
+    if (!activePipeline) {
+      showNotification('Select a municipal pathway first to share it.', 'warn');
+      return;
+    }
+    const completed = (activePipeline.nodes || []).filter((n) => n.status === 'completed').map((n) => n.id);
+    const url = buildShareUrl({
+      key: isDynamicRoute ? null : activeKey,
+      query: isDynamicRoute ? activeSearchQuery : null,
+      completed,
+      ward: selectedWard,
+    });
+    try {
+      await navigator.clipboard.writeText(url);
+      showNotification('Shareable link copied to clipboard.', 'success');
+    } catch {
+      showNotification('Copy failed — you can copy the link from the address bar.', 'warn');
+    }
+  };
+
+  // Restore state from a shared link on first load (before falling back to localStorage).
+  useEffect(() => {
+    const shared = parseShareState();
+    if (!shared) return;
+    if (shared.ward) setSelectedWard(shared.ward);
+
+    const applyCompleted = (key) => {
+      if (!shared.completed?.length) return;
+      setPipelines((prev) => {
+        const p = prev[key];
+        if (!p) return prev;
+        const completedSet = new Set(shared.completed);
+        const marked = (p.nodes || []).map((n) => (completedSet.has(n.id) ? { ...n, status: 'completed' } : n));
+        return { ...prev, [key]: { ...p, nodes: resolveDependencies(marked) } };
+      });
+    };
+
+    if (shared.key && INITIAL_PIPELINES[shared.key]) {
+      setActiveKey(shared.key);
+      setIsDynamicRoute(false);
+      applyCompleted(shared.key);
+    } else if (shared.query) {
+      setActiveSearchQuery(shared.query);
+      handleSearchIntent(shared.query);
+    }
+    // Clear share params from the URL so a refresh doesn't re-trigger.
+    window.history.replaceState({}, '', window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="app-container bg-[#f1f2f4] dark:bg-[#090a0f] text-zinc-900 dark:text-zinc-100 font-sans min-h-screen flex flex-col transition-colors duration-200">
-      {/* Toast Notification Banner */}
-      {notification && (
-        <div className="fixed top-4 right-4 z-50 bg-zinc-900 dark:bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-          <span>{notification}</span>
-        </div>
-      )}
+      {/* Stackable Toast Notifications */}
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
 
       {/* 1. Top Navigation Bar */}
       <Header
         theme={theme}
         onToggleTheme={toggleTheme}
-        onExportDocket={() => {
-          if (activePipeline) {
-            printComplianceDocket();
-          } else {
-            showNotification('Please select a municipal pathway to export citizen docket.');
-          }
-        }}
+        onExportDocket={handleExportDocket}
+        onExportPdf={handleExportPdf}
+        onShare={handleShare}
+        canExport={!!activePipeline}
         onOpenAdmin={() => setIsAdminOpen(true)}
         selectedWard={selectedWard}
         onSelectWard={setSelectedWard}
+        selectedCity={selectedCity}
+        onSelectCity={setSelectedCity}
         onGoHome={() => {
           setActiveKey(null);
           setActiveSearchQuery('');
@@ -351,13 +427,27 @@ export default function App() {
 
       {/* 2. Main Canvas Area */}
       <main className="main-content flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-6">
-        {/* Active Resolution Loader Stepper */}
+        {/* Active Resolution Loader Stepper + Skeleton */}
         {isLoading && (
-          <div className="bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl p-4 shadow-sm flex items-center space-x-3.5 animate-pulse">
-            <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Synthesizing Official Regulatory Lineage</p>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{loadingStatus}</p>
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl p-4 shadow-sm flex items-center space-x-3.5">
+              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Synthesizing Official Regulatory Lineage</p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{loadingStatus}</p>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-32 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 animate-pulse" />
+                ))}
+              </div>
+              <div className="lg:col-span-4 space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-16 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 animate-pulse" />
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -368,9 +458,33 @@ export default function App() {
           readinessScore={readiness.percentage}
           onSearchIntent={handleSearchIntent}
           activeSearchQuery={activeSearchQuery}
-          isDynamic={isDynamicRoute}
           isLoading={isLoading}
+          onPersonalize={() => setIsWizardOpen(true)}
         />
+
+        {/* Personalized eligibility summary */}
+        {activePipeline && eligibility && (
+          <div className="max-w-7xl mx-auto w-full bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800/60 rounded-2xl p-4 animate-fade-in-up">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-brand-900 dark:text-brand-200">Tailored to your answers <span className="font-normal text-brand-700/80 dark:text-brand-300/70">· advisory only, verify on the portal</span></p>
+                  <ul className="mt-1.5 space-y-1">
+                    {eligibility.summary.map((s, i) => (
+                      <li key={i} className="text-[11px] text-brand-800 dark:text-brand-300 leading-snug flex gap-1.5">
+                        <span className="text-brand-400">•</span><span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <button onClick={() => setEligibility(null)} className="text-brand-400 hover:text-brand-700 dark:hover:text-brand-200 shrink-0" aria-label="Dismiss personalization">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Route View: If a pipeline is active, render workbench; otherwise render the Welcome Catalog */}
         {activePipeline ? (
@@ -380,7 +494,10 @@ export default function App() {
             selectedNodeId={selectedNodeId}
             onSelectNode={(id) => setSelectedNodeId(id)}
             onToggleNode={handleToggleNode}
-            onExportDocket={printComplianceDocket}
+            onExportDocket={handleExportDocket}
+            onExportPdf={handleExportPdf}
+            onShare={handleShare}
+            verification={verification}
             onResetPipeline={() => {
               setActiveKey(null);
               setActiveSearchQuery('');
@@ -394,7 +511,6 @@ export default function App() {
               setActiveSearchQuery(query || '');
               setIsDynamicRoute(false);
             }}
-            onSearchIntent={handleSearchIntent}
           />
         )}
       </main>
@@ -403,10 +519,13 @@ export default function App() {
       <StepDrawer
         node={selectedNode}
         allNodes={activePipeline?.nodes || []}
+        pipeline={activePipeline}
         isOpen={!!selectedNodeId}
         onClose={() => setSelectedNodeId(null)}
         onToggleStatus={handleToggleNode}
         onSelectNode={(id) => setSelectedNodeId(id)}
+        verification={verification}
+        eligibilityNote={eligibility?.nodeNotes?.[selectedNodeId]}
       />
 
       {/* 4. Privileged Clerk / Steward Audit Modal */}
@@ -416,11 +535,24 @@ export default function App() {
         onElevateRole={handleElevateRole}
         activePipeline={activePipeline}
         onUpdatePipelineNode={handleUpdatePipelineNode}
+        verification={verification}
+      />
+
+      {/* Eligibility Personalization Wizard */}
+      <EligibilityWizard
+        isOpen={isWizardOpen}
+        pipeline={activePipeline}
+        onClose={() => setIsWizardOpen(false)}
+        onApply={(result) => {
+          setEligibility(result);
+          showNotification('Roadmap personalized to your answers.', 'success');
+        }}
       />
 
       {/* 5. Clean Institutional Footer */}
       <Footer
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onNotify={showNotification}
       />
 
       {/* 6. Printable Compliance Action Docket */}

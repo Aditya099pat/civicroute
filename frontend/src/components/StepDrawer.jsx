@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
-import { X, Check, FileCheck, ShieldCheck, ExternalLink, Lock, Unlock, ArrowRight, GitFork, AlertCircle, Info, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Check, FileCheck, ShieldCheck, ExternalLink, Lock, Unlock, ArrowRight, GitFork, Info, Calendar, Sparkles } from 'lucide-react';
+import VerificationBadge from './VerificationBadge';
+import StepAssistant from './StepAssistant';
 
 export default function StepDrawer({
   node,
   allNodes = [],
+  pipeline,
   isOpen,
   onClose,
   onToggleStatus,
-  onSelectNode
+  onSelectNode,
+  verification,
+  eligibilityNote
 }) {
   const [activeTab, setActiveTab] = useState('prereqs'); // 'prereqs' | 'docs' | 'provenance'
   const [checkedDocs, setCheckedDocs] = useState({});
+
+  // Close on Escape while open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !node) return null;
 
@@ -35,18 +48,22 @@ export default function StepDrawer({
   const officeType = node.officeType || node.type;
   const docs = node.documentsRequired || node.docs || [];
 
-  // Extract domain for verification
-  let domain = 'gov.in';
-  if (url) {
-    try {
-      domain = new URL(url).hostname;
-    } catch {
-      domain = 'gov.in';
-    }
-  }
+  const verifyStatus = verification && url ? verification.statusFor(url) : null;
+  const verifyDetail = verifyStatus?.detail || null;
 
   return (
-    <aside className="w-full sm:w-[460px] bg-white dark:bg-zinc-900 border-l border-[#e2e4e8] dark:border-zinc-800 shadow-2xl flex flex-col fixed right-0 top-0 bottom-0 z-50 animate-slide-in-right transition-colors duration-200">
+    <>
+      {/* Backdrop (click to close) */}
+      <div
+        className="fixed inset-0 bg-zinc-900/30 dark:bg-black/50 z-40 animate-in fade-in duration-150"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+    <aside
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Milestone details: ${node.title}`}
+      className="w-full sm:w-[460px] bg-white dark:bg-zinc-900 border-l border-[#e2e4e8] dark:border-zinc-800 shadow-2xl flex flex-col fixed right-0 top-0 bottom-0 z-50 animate-slide-in-right transition-colors duration-200">
       {/* Drawer Header */}
       <div className="p-5 border-b border-[#e2e4e8] dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900 flex items-start justify-between">
         <div>
@@ -162,7 +179,19 @@ export default function StepDrawer({
           }`}
         >
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Official Provenance</span>
+          <span>Provenance</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('ask')}
+          className={`py-2.5 px-3 border-b-2 flex items-center space-x-1.5 transition ${
+            activeTab === 'ask'
+              ? 'border-brand-600 dark:border-brand-400 text-brand-700 dark:text-brand-400 font-bold bg-white dark:bg-zinc-900'
+              : 'border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Ask AI</span>
         </button>
       </div>
 
@@ -171,6 +200,14 @@ export default function StepDrawer({
         {/* TAB 1: PREREQUISITES & SPECIFICATIONS */}
         {activeTab === 'prereqs' && (
           <div className="space-y-4">
+            {/* Personalized note from the eligibility wizard */}
+            {eligibilityNote && (
+              <div className="p-3 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/50 flex items-start gap-2 text-[11px] text-brand-800 dark:text-brand-300">
+                <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <div><span className="font-bold">Tailored to you: </span>{eligibilityNote.note}</div>
+              </div>
+            )}
+
             {/* Metadata Grid */}
             <div className="grid grid-cols-2 gap-2.5">
               <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-[#e2e4e8] dark:border-zinc-800">
@@ -331,36 +368,33 @@ export default function StepDrawer({
         {/* TAB 3: OFFICIAL PORTAL PROVENANCE */}
         {activeTab === 'provenance' && (
           <div className="space-y-3.5">
-            <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl space-y-3">
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border border-[#e2e4e8] dark:border-zinc-800 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-900/40 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700">
-                  <ShieldCheck className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
-                  <span>SSL Encrypted Official Gateway</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                  Official Portal
                 </span>
-                <span className="font-mono-code text-[10px] text-zinc-500 dark:text-zinc-400">
-                  TLS 1.3 Certified
-                </span>
+                {verifyStatus && <VerificationBadge status={verifyStatus} />}
               </div>
 
               <div>
                 <h5 className="font-bold text-zinc-900 dark:text-zinc-100 text-xs">
-                  {node.portalName || "State Digital Services Gateway"}
+                  {node.department || node.dept || 'Government Services Portal'}
                 </h5>
                 <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">
-                  Verified authentic government endpoint indexed for Brihanmumbai municipal jurisdiction.
+                  This link points to an official government portal. Always confirm details on the portal itself before filing.
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-between">
+              <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-700/60 flex items-center justify-between gap-2">
                 <span className="font-mono-code text-[11px] text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]">
-                  {url}
+                  {url || '—'}
                 </span>
                 {url && (
                   <a
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 px-3 py-1.5 rounded-lg shadow-xs transition"
+                    className="inline-flex items-center space-x-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 px-3 py-1.5 rounded-lg shadow-xs transition shrink-0"
                   >
                     <span>Open Portal</span>
                     <ExternalLink className="w-3 h-3 ml-0.5" />
@@ -369,28 +403,62 @@ export default function StepDrawer({
               </div>
             </div>
 
-            {/* Gazette Circular Citation & Audit Trail */}
+            {/* Live verification detail (real, observed facts only) */}
             <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-[#e2e4e8] dark:border-zinc-800 rounded-xl space-y-2 text-zinc-600 dark:text-zinc-400 text-xs">
               <div className="font-bold text-zinc-800 dark:text-zinc-200 flex items-center space-x-1.5">
                 <Calendar className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                <span>Audit &amp; Gazette Provenance</span>
+                <span>Live Verification</span>
               </div>
-              <div>
-                <span className="text-zinc-400 dark:text-zinc-500">Gazette Citation Code: </span>
-                <span className="font-mono-code font-bold text-zinc-800 dark:text-zinc-200">{node.gazetteCode || 'GOV-IN-VERIFIED'}</span>
-              </div>
-              <div>
-                <span className="text-zinc-400 dark:text-zinc-500">Crawler Timestamp: </span>
-                <span className="font-mono-code text-zinc-700 dark:text-zinc-300">Indexed from Maharashtra Aaple Sarkar portal</span>
-              </div>
-              <div>
-                <span className="text-zinc-400 dark:text-zinc-500">Verification Hash: </span>
-                <span className="font-mono-code text-zinc-500 dark:text-zinc-400">#sha256-e8a9f24b01cf8841a</span>
-              </div>
+              {verifyDetail ? (
+                <>
+                  <div>
+                    <span className="text-zinc-400 dark:text-zinc-500">Government domain: </span>
+                    <span className="font-mono-code text-zinc-700 dark:text-zinc-300">
+                      {verifyDetail.isGovDomain ? `yes (${verifyDetail.hostname})` : `no (${verifyDetail.hostname || 'n/a'})`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400 dark:text-zinc-500">HTTP status: </span>
+                    <span className="font-mono-code text-zinc-700 dark:text-zinc-300">{verifyDetail.statusCode ?? verifyDetail.status ?? 'n/a'}</span>
+                  </div>
+                  {verifyDetail.tls && (
+                    <div>
+                      <span className="text-zinc-400 dark:text-zinc-500">TLS: </span>
+                      <span className="font-mono-code text-zinc-700 dark:text-zinc-300">
+                        {verifyDetail.tls.protocol || 'n/a'}{verifyDetail.tls.issuer ? ` · ${verifyDetail.tls.issuer}` : ''}
+                      </span>
+                    </div>
+                  )}
+                  {verifyDetail.contentHash && (
+                    <div>
+                      <span className="text-zinc-400 dark:text-zinc-500">Content hash: </span>
+                      <span className="font-mono-code text-zinc-500 dark:text-zinc-400 break-all">{verifyDetail.contentHash}</span>
+                    </div>
+                  )}
+                  {verifyDetail.checkedAt && (
+                    <div>
+                      <span className="text-zinc-400 dark:text-zinc-500">Checked at: </span>
+                      <span className="font-mono-code text-zinc-500 dark:text-zinc-400">{new Date(verifyDetail.checkedAt).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Live verification is unavailable (the verification service may be offline). Open the portal to confirm authenticity.
+                </p>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* TAB 4: AI ASSISTANT */}
+        {activeTab === 'ask' && (
+          <div className="h-full min-h-[360px] flex flex-col">
+            <StepAssistant node={node} pipeline={pipeline} />
           </div>
         )}
       </div>
     </aside>
+    </>
   );
 }
