@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Search, ArrowRight, ShieldCheck, CheckCircle2, Lock, AlertTriangle, Sparkles, Mic } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
@@ -12,9 +12,10 @@ export default function SearchConsole({
 }) {
   const [searchInput, setSearchInput] = useState(activeSearchQuery);
 
+  const handleVoiceResult = useCallback((transcript) => setSearchInput(transcript), []);
   const { supported: voiceSupported, listening, start: startVoice } = useSpeechRecognition({
     lang: 'en-IN',
-    onResult: (transcript) => setSearchInput(transcript),
+    onResult: handleVoiceResult,
   });
 
   const handleSearchSubmit = (e) => {

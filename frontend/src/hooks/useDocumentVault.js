@@ -6,7 +6,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
  * with per-pipeline check-state persisted in localStorage.
  */
 export function useDocumentVault(pipeline) {
-  const storageKey = pipeline?.id ? `civicroute_vault_${pipeline.id}` : null;
+  // Key on id + a slug of the title so distinct dynamic AI routes that happen to
+  // share an id (e.g. 'CIV-LIVE') don't share check-state.
+  const slug = (pipeline?.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+  const storageKey = pipeline?.id ? `civicroute_vault_${pipeline.id}_${slug}` : null;
 
   const docs = useMemo(() => {
     const map = new Map(); // normalized -> { label, steps: [{index, code, title}] }
