@@ -55,7 +55,10 @@ Flexible layout visualization modes including the high-density Tabular List with
 ## ⚡ Core Features
 
 - **Integrated Command Omnibar**: Single-field civic intent search bar with instant `Enter` key execution and pre-configured quick seeds (*Gumasta License, FSSAI Food License, Property Tax Mutation, Rooftop Solar Net-Metering, Commercial Water Connection, Fire NOC*).
-- **Institutional Provenance Auditing**: Every route is audited against statutory municipal frameworks (e.g., *Maharashtra Municipal Corporations Act § 129* and *Citizen Charter 2026*).
+- **Live Portal Verification (real, not decorative)**: Each official `.gov.in` link is checked live by the backend — genuine government domain, HTTPS, reachability, real TLS certificate details, and a real content hash — surfaced as honest *Reachable / Unreachable / Not verified* badges. Requests are restricted to a government-domain allowlist (SSRF-safe) and cached.
+- **Shareable Pathways**: Copy a link that encodes the selected pathway and your completed milestones so anyone can open the same roadmap and progress (no server-side storage).
+- **PDF & Print Export**: Download the citizen action docket as a real PDF (`jsPDF` + `html2canvas`) or print it via the high-contrast print stylesheet.
+- **Single Source of Truth**: All pipeline definitions live in `backend/seeds/` and are served over the API, with a bundled frontend fallback for offline use — no data duplication/drift.
 - **Topological Milestone Pipeline**: Horizontal roadmap with explicit overflow protection, continuous SVG connector rails, and dynamic prerequisite lock/unlock cascading.
 - **Physical Enclosures Desk**: Dedicated side desk for mandatory physical municipal submissions—notarized ₹100 stamp paper indemnity bonds, municipal zero-dues clearance receipts, and registered cooperative housing society (CHS) NOCs.
 - **Multi-Tab Step Drawer**: Slide-out drawer displaying upstream dependency lineage jump-links, RTS Act turnaround guarantees, interactive document check-off, and gazette circular hashes.
@@ -86,10 +89,12 @@ Flexible layout visualization modes including the high-density Tabular List with
 civicroute/
 ├── backend/                        # Express API Backend
 │   ├── src/
-│   │   ├── server.js               # API server with Gemini synthesis & fallback
-│   │   └── data/                   # Server-side seed definitions
+│   │   ├── server.js               # API server: hardened middleware, routes, Gemini + failover
+│   │   ├── pipelines.js            # Seed loader, catalog, fee summing, keyword matcher
+│   │   └── verify.js               # Honest URL verification (SSRF-safe, TLS + hash, cached)
+│   ├── seeds/                      # Canonical pipeline definitions (single source of truth)
 │   ├── .env.example                # Template for environment variables
-│   ├── package.json                # Backend dependencies (@google/genai, cors, express)
+│   ├── package.json                # Backend deps (@google/genai, express, helmet, morgan, rate-limit)
 │   └── README.md
 ├── frontend/                       # React + Vite Frontend
 │   ├── public/
@@ -98,23 +103,30 @@ civicroute/
 │   │   └── logo.png                # Official emblem & brand mark
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── AdminModal.jsx      # Clerk & Data Steward management modal
-│   │   │   ├── Footer.jsx          # Municipal footer & audit stamps
-│   │   │   ├── Header.jsx          # Ward switcher & navigation bar
+│   │   │   ├── AdminModal.jsx      # Clerk & Data Steward console (live URL audit)
+│   │   │   ├── Footer.jsx          # Footer with honest, non-impersonating links
+│   │   │   ├── Header.jsx          # Ward switcher, theme, Share / Docket / PDF actions
 │   │   │   ├── MilestoneCanvas.jsx # 12-col workbench & physical enclosures desk
-│   │   │   ├── MilestoneList.jsx   # Multi-view roadmap, tabular, and tree switcher
-│   │   │   ├── MilestoneTree.jsx   # Vertical DAG prerequisite graph
+│   │   │   ├── MilestoneList.jsx   # Multi-view roadmap / tabular / DAG switcher
+│   │   │   ├── MilestoneTree.jsx   # True branching SVG DAG (fan-out / fan-in)
 │   │   │   ├── PrintDocket.jsx     # Printable counter-ready compliance docket
-│   │   │   ├── SearchConsole.jsx   # Integrated command omnibar & metric ribbon
-│   │   │   └── StepDrawer.jsx      # Multi-tab milestone inspection drawer
+│   │   │   ├── SearchConsole.jsx   # Command omnibar, metric ribbon & readiness bar
+│   │   │   ├── StepDrawer.jsx      # Multi-tab inspection drawer (real provenance)
+│   │   │   ├── ToastStack.jsx      # Stackable toast notifications
+│   │   │   ├── VerificationBadge.jsx # Honest verification status badge
+│   │   │   └── WelcomeCatalog.jsx  # Catalog directory (fed by the API)
 │   │   ├── data/
-│   │   │   └── pipelines.js        # Comprehensive municipal clearance workflows
-│   │   ├── styles/
-│   │   │   ├── animations.css      # Slide-in and pulse animations
-│   │   │   └── variables.css       # Design tokens and color standards
+│   │   │   └── pipelines.js        # Bundled offline fallback pipelines
+│   │   ├── hooks/
+│   │   │   ├── useToasts.js        # Toast state
+│   │   │   └── useVerification.js  # Live URL verification state
+│   │   ├── styles/                 # animations.css, variables.css
 │   │   ├── utils/
-│   │   │   ├── dagResolver.js      # Topological prerequisite resolution & readiness math
-│   │   │   └── printUtils.js       # Window print trigger utility
+│   │   │   ├── api.js              # Single API client (catalog, resolve, verify) + offline fallback
+│   │   │   ├── dagResolver.js      # Topological resolution & readiness math
+│   │   │   ├── printUtils.js       # Print + real PDF export
+│   │   │   └── shareState.js       # Encode/decode shareable pathway links
+│   │   ├── config.js               # VITE_API_URL-driven API base URL
 │   │   ├── App.jsx                 # Core application shell & state coordinator
 │   │   ├── App.css
 │   │   ├── index.css
@@ -173,12 +185,18 @@ cd civicroute
      ```powershell
      Copy-Item .env.example .env
      ```
-3. Open `.env` in any text editor and provide your Google Gemini API key:
+3. Open `.env` in any text editor and configure it:
    ```env
    PORT=5000
    GEMINI_API_KEY=your_gemini_api_key_here
+   GEMINI_MODEL=gemini-2.5-flash
+   GEMINI_FALLBACK_MODEL=gemini-2.0-flash
+   CORS_ORIGIN=http://localhost:5173
+   ALLOWED_VERIFY_HOSTS=.gov.in,.gov,.nic.in
    ```
    > 💡 *Note: If you do not have a Gemini API key, you can leave it blank. CivicRoute automatically fails over to its verified local municipal pipeline database without crashing.*
+
+   *(Optional)* To point the frontend at a non-default backend, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL`.
 
 4. Return to the project root:
    ```bash
@@ -292,13 +310,44 @@ npm run preview
 ## 📡 API Reference
 
 ### Health Check
-- **Endpoint**: `GET /health`
+- **Endpoint**: `GET /api/health` (alias: `GET /health`)
 - **Response**:
   ```json
   {
-    "status": "ok",
-    "timestamp": "2026-09-28T01:00:00.000Z",
-    "service": "CivicRoute Backend API"
+    "status": "healthy",
+    "service": "CivicRoute Backend API",
+    "version": "1.1.0",
+    "uptimeSeconds": 42,
+    "aiConfigured": true,
+    "timestamp": "2026-09-28T01:00:00.000Z"
+  }
+  ```
+
+### Pipeline Catalog (single source of truth)
+- **Endpoint**: `GET /api/pipelines` — metadata list for the directory UI.
+- **Endpoint**: `GET /api/pipelines/:key` — a full pipeline (e.g. `/api/pipelines/cloud_kitchen`).
+- The frontend consumes these and falls back to a bundled copy of the same seeds when the backend is offline, so the two never drift.
+
+### Live URL Verification (honest trust signals)
+- **Endpoint**: `POST /api/verify-urls`
+- **Request Body**: `{ "urls": ["https://foscos.fssai.gov.in", "https://incometax.gov.in"] }`
+- Returns only **observed facts** per URL — whether the host is a genuine government domain, HTTPS, reachable (HTTP status), real TLS certificate details, and a real content hash. Requests are restricted to an allowlist of government domain suffixes (SSRF protection), and results are cached for 30 minutes.
+- **Response** (per URL):
+  ```json
+  {
+    "results": {
+      "https://foscos.fssai.gov.in": {
+        "hostname": "foscos.fssai.gov.in",
+        "isHttps": true,
+        "isGovDomain": true,
+        "reachable": true,
+        "statusCode": 200,
+        "tls": { "protocol": "TLSv1.3", "issuer": "…", "validTo": "…", "trusted": true },
+        "contentHash": "sha256:…",
+        "verified": true,
+        "checkedAt": "2026-09-28T01:00:00.000Z"
+      }
+    }
   }
   ```
 

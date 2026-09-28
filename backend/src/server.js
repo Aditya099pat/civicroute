@@ -1,38 +1,59 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
+
+import { getCatalog, getPipeline, matchSeed, sumFees } from './pipelines.js';
+import { verifyUrls } from './verify.js';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const PORT = process.env.PORT || 5000;
+const VERSION = '1.1.0';
+const START_TIME = Date.now();
+const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.0-flash';
 
-app.use(cors({ origin: '*' }));
-app.use(express.json());
+// ---- Security & platform middleware --------------------------------------
+app.use(helmet());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Initialize Google Gen AI client safely
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+app.use(
+  cors({
+    origin: corsOrigin === '*' ? '*' : corsOrigin.split(',').map((s) => s.trim()),
+  })
+);
+app.use(express.json({ limit: '256kb' }));
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' },
+});
+app.use('/api/', apiLimiter);
+
+// ---- Gemini client (optional) --------------------------------------------
 let ai = null;
 if (process.env.GEMINI_API_KEY) {
   try {
     ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   } catch (err) {
-    console.warn("[CivicRoute Backend] Failed to initialize GoogleGenAI:", err.message);
+    console.warn('[CivicRoute Backend] Failed to initialize GoogleGenAI:', err.message);
   }
 }
 
-// Enforced Output Schema for Gemini
 const civicGraphSchema = {
   type: Type.OBJECT,
   properties: {
-    task: { type: Type.STRING, description: "Normalized civic or commercial activity name" },
-    jurisdiction: { type: Type.STRING, description: "Target municipal ward or city department" },
+    task: { type: Type.STRING, description: 'Normalized civic or commercial activity name' },
+    jurisdiction: { type: Type.STRING, description: 'Target municipal ward or city department' },
     nodes: {
       type: Type.ARRAY,
       items: {
@@ -40,120 +61,113 @@ const civicGraphSchema = {
         properties: {
           id: { type: Type.STRING, description: "Sequential ID: '1', '2', '3', etc." },
           code: { type: Type.STRING, description: "Short regulatory reference code, e.g., 'DOC-8812'" },
-          title: { type: Type.STRING, description: "Official name of the certificate, NOC, or license" },
-          department: { type: Type.STRING, description: "Responsible municipal or state department" },
+          title: { type: Type.STRING, description: 'Official name of the certificate, NOC, or license' },
+          department: { type: Type.STRING, description: 'Responsible municipal or state department' },
           officeType: {
             type: Type.STRING,
-            enum: ["Online", "Physical Ward Office", "Hybrid"],
-            description: "How the citizen applies"
+            enum: ['Online', 'Physical Ward Office', 'Hybrid'],
+            description: 'How the citizen applies',
           },
           estimatedDays: { type: Type.STRING, description: "Estimated SLA turnaround, e.g., '3-5 Days'" },
           fee: { type: Type.STRING, description: "Official statutory government fee, e.g., '₹1,500'" },
-          officialUrl: { type: Type.STRING, description: "Direct authentic .gov or .gov.in URL" },
+          officialUrl: { type: Type.STRING, description: 'Direct authentic .gov or .gov.in URL' },
           documentsRequired: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Specific documentation enclosures required"
+            description: 'Specific documentation enclosures required',
           },
           prerequisites: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Array of node IDs that MUST be approved prior to this node"
-          }
+            description: 'Array of node IDs that MUST be approved prior to this node',
+          },
         },
         required: [
-          "id", "code", "title", "department", "officeType",
-          "estimatedDays", "fee", "officialUrl", "documentsRequired", "prerequisites"
-        ]
-      }
-    }
+          'id', 'code', 'title', 'department', 'officeType',
+          'estimatedDays', 'fee', 'officialUrl', 'documentsRequired', 'prerequisites',
+        ],
+      },
+    },
   },
-  required: ["task", "jurisdiction", "nodes"]
+  required: ['task', 'jurisdiction', 'nodes'],
 };
 
-// Topological Edge Calculator
+// ---- DAG helpers ----------------------------------------------------------
 function computeEdges(nodes) {
   const edges = [];
   for (const node of nodes) {
     const prereqs = node.prerequisites || node.prereqs || [];
     if (Array.isArray(prereqs)) {
       for (const parentId of prereqs) {
-        edges.push({
-          id: `e${parentId}-${node.id}`,
-          source: String(parentId),
-          target: String(node.id)
-        });
+        edges.push({ id: `e${parentId}-${node.id}`, source: String(parentId), target: String(node.id) });
       }
     }
   }
   return edges;
 }
 
-// Initial status initializer: root nodes (no prerequisites) become 'available', all others become 'locked'
 function initializeStatuses(nodes) {
   return nodes.map((node) => {
     const prereqs = node.prerequisites || node.prereqs || [];
-    const isRoot = !prereqs || prereqs.length === 0;
-    return {
-      ...node,
-      status: isRoot ? "available" : "locked"
-    };
+    return { ...node, status: !prereqs || prereqs.length === 0 ? 'available' : 'locked' };
   });
 }
 
-function getFallbackSeed(query = '') {
-  const q = query.toLowerCase();
-
-  let seedFile = 'food_business.json';
-  if (q.includes('solar') || q.includes('rooftop') || q.includes('msedcl') || q.includes('net meter') || q.includes('net-meter') || q.includes('pv')) {
-    seedFile = 'rooftop_solar.json';
-  } else if (q.includes('gumasta') || q.includes('shop act') || q.includes('establishment act')) {
-    seedFile = 'gumasta_license.json';
-  } else if (q.includes('cloud kitchen') || q.includes('bakery') || q.includes('food business')) {
-    seedFile = 'food_business.json';
-  } else if (q.includes('fssai') || q.includes('restaurant')) {
-    seedFile = 'fssai_license.json';
-  } else if (q.includes('fire') || q.includes('noc')) {
-    seedFile = 'fire_noc.json';
-  } else if (q.includes('property') || q.includes('tax') || q.includes('mutation')) {
-    seedFile = 'property_tax.json';
-  } else if (q.includes('water') || q.includes('plumber') || q.includes('tapping') || q.includes('pipeline')) {
-    seedFile = 'water_connection.json';
-  }
-
-  const filePath = path.join(__dirname, '..', 'seeds', seedFile);
-  try {
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    }
-  } catch (err) {
-    console.error(`[Seed Parse Error] in ${seedFile}:`, err.message);
-  }
-
-  // Final emergency fallback if the requested file had a syntax error
-  const fallbackDefault = path.join(__dirname, '..', 'seeds', 'food_business.json');
-  try {
-    if (fs.existsSync(fallbackDefault)) {
-      return JSON.parse(fs.readFileSync(fallbackDefault, 'utf-8'));
-    }
-  } catch (e) {
-    console.error("Default seed also failed:", e.message);
-  }
-
-  return null;
+async function generateWithModel(model, systemPrompt, userQuery, userLocation) {
+  const response = await ai.models.generateContent({
+    model,
+    contents: `Map out the complete civic compliance roadmap for: ${userQuery} in ${userLocation}`,
+    config: {
+      systemInstruction: systemPrompt,
+      responseMimeType: 'application/json',
+      responseSchema: civicGraphSchema,
+      temperature: 0.2,
+    },
+  });
+  return response;
 }
 
-// Core Resolver Route
+// ---- Routes ---------------------------------------------------------------
+
+// Catalog of verified seed pipelines (single source of truth for the UI).
+app.get('/api/pipelines', (req, res) => res.json({ pipelines: getCatalog() }));
+
+app.get('/api/pipelines/:key', (req, res) => {
+  const pipeline = getPipeline(req.params.key);
+  if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+  return res.json(pipeline);
+});
+
+// Honest live verification of official portal URLs.
+app.post('/api/verify-urls', async (req, res) => {
+  const { urls } = req.body || {};
+  if (!Array.isArray(urls) || urls.length === 0) {
+    return res.status(400).json({ error: 'Provide a non-empty "urls" array.' });
+  }
+  try {
+    const results = await verifyUrls(urls);
+    return res.json({ results });
+  } catch (err) {
+    console.error('[Verify Error]', err.message);
+    return res.status(500).json({ error: 'Verification failed.', details: err.message });
+  }
+});
+
+// Resolve a civic intent into a DAG, with graceful seed failover.
 app.post('/api/generate-path', async (req, res) => {
-  const { query, location } = req.body;
-  const userQuery = query || 'Register a small business';
-  const userLocation = location || 'Mumbai, Maharashtra';
+  const { query, location } = req.body || {};
+  const userQuery = (typeof query === 'string' && query.trim()) || 'Register a small business';
+  const userLocation = (typeof location === 'string' && location.trim()) || 'Mumbai, Maharashtra';
+
+  if (userQuery.length > 300) {
+    return res.status(400).json({ error: 'Query too long (max 300 characters).' });
+  }
 
   const startTime = Date.now();
 
   try {
     if (!ai || !process.env.GEMINI_API_KEY) {
-      throw new Error("Missing or unconfigured GEMINI_API_KEY.");
+      throw new Error('Missing or unconfigured GEMINI_API_KEY.');
     }
 
     const systemPrompt = `You are an elite Municipal Bureaucracy Path Compiler and Regulatory Auditor for Indian civic bodies.
@@ -167,78 +181,69 @@ Strict Requirements:
 4. Output must strictly conform to the provided JSON schema.`;
 
     let response;
+    let engineModel = PRIMARY_MODEL;
     try {
-      response = await ai.models.generateContent({
-        model: 'gemini-flash-latest',
-        contents: `Map out the complete civic compliance roadmap for: ${userQuery} in ${userLocation}`,
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: 'application/json',
-          responseSchema: civicGraphSchema,
-          temperature: 0.2
-        }
-      });
+      response = await generateWithModel(PRIMARY_MODEL, systemPrompt, userQuery, userLocation);
     } catch (e1) {
-      console.warn(`[Gemini Flash-Latest] notice: ${e1.message}. Falling back to gemini-3.8-flash...`);
-      response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: `Map out the complete civic compliance roadmap for: ${userQuery} in ${userLocation}`,
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: 'application/json',
-          responseSchema: civicGraphSchema,
-          temperature: 0.2
-        }
-      });
+      console.warn(`[Gemini ${PRIMARY_MODEL}] notice: ${e1.message}. Falling back to ${FALLBACK_MODEL}...`);
+      engineModel = FALLBACK_MODEL;
+      response = await generateWithModel(FALLBACK_MODEL, systemPrompt, userQuery, userLocation);
     }
 
     const parsedData = JSON.parse(response.text);
-
-    // Compute dynamic edges and initial statuses
     const nodesWithStatus = initializeStatuses(parsedData.nodes);
     const edges = computeEdges(nodesWithStatus);
 
-    const latency = Date.now() - startTime;
-
     return res.status(200).json({
       task: parsedData.task,
+      title: parsedData.task,
       jurisdiction: parsedData.jurisdiction,
+      totalFee: sumFees(nodesWithStatus) || 'Statutory Fee Schedule Attached',
+      primaryDept: nodesWithStatus[0]?.department || 'Municipal Facilitation Desk',
+      cycleTime: '14 - 21 Business Days',
       nodes: nodesWithStatus,
       edges,
       telemetry: {
-        parserLatencyMs: latency,
-        engine: 'Gemini Flash (Structured Schema)',
-        isFallback: false
-      }
+        parserLatencyMs: Date.now() - startTime,
+        engine: `Gemini (${engineModel})`,
+        isFallback: false,
+      },
     });
-
   } catch (error) {
     console.warn(`[Resolver Error] Using pre-compiled failover seed: ${error.message}`);
-
-    const fallbackData = getFallbackSeed(userQuery);
+    const fallbackData = matchSeed(userQuery);
     if (fallbackData) {
       return res.status(200).json({
         ...fallbackData,
         telemetry: {
           parserLatencyMs: Date.now() - startTime,
-          engine: 'Verified Seed Fallover',
-          isFallback: true
-        }
+          engine: 'Verified Seed Failover',
+          isFallback: true,
+        },
       });
     }
-
     return res.status(500).json({
-      error: "Failed to resolve municipal path and no cached seed was available.",
-      details: error.message
+      error: 'Failed to resolve municipal path and no cached seed was available.',
+      details: error.message,
     });
   }
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
-});
+// Health checks (both paths for compatibility).
+function health(req, res) {
+  res.json({
+    status: 'healthy',
+    service: 'CivicRoute Backend API',
+    version: VERSION,
+    uptimeSeconds: Math.round((Date.now() - START_TIME) / 1000),
+    aiConfigured: !!ai,
+    timestamp: new Date().toISOString(),
+  });
+}
+app.get('/api/health', health);
+app.get('/health', health);
 
 app.listen(PORT, () => {
-  console.log(`[CivicRoute Backend] Running on http://localhost:${PORT}`);
+  console.log(`[CivicRoute Backend] Running on http://localhost:${PORT} (v${VERSION})`);
+  console.log(`  Health: http://localhost:${PORT}/api/health`);
 });

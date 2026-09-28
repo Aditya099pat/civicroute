@@ -10,6 +10,9 @@ export default function MilestoneList({
   onSelectNode,
   onToggleNode,
   onExportDocket,
+  onExportPdf,
+  onShare,
+  verification,
   onResetPipeline
 }) {
   const [viewMode, setViewMode] = useState('horizontal'); // 'horizontal' | 'list' | 'tree'
@@ -78,6 +81,9 @@ export default function MilestoneList({
           onSelectNode={onSelectNode}
           onToggleNode={onToggleNode}
           onExportDocket={onExportDocket}
+          onExportPdf={onExportPdf}
+          onShare={onShare}
+          verification={verification}
         />
       )}
 
@@ -88,6 +94,7 @@ export default function MilestoneList({
             selectedNodeId={selectedNodeId}
             onSelectNode={onSelectNode}
             onToggleNode={onToggleNode}
+            verification={verification}
           />
         </div>
       )}

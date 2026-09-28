@@ -1,12 +1,9 @@
+/**
+ * CivicRoute design tokens.
+ * Colors are driven by Tailwind utility classes + the tailwind.config.js theme;
+ * this file is reserved for any raw CSS custom properties we need outside Tailwind.
+ */
 :root {
-  --color-brand-bg: #f8fafc;
-  --color-brand-card: #ffffff;
-  --color-brand-card-inner: #f1f5f9;
-  --color-brand-card-hover: #f8fafc;
-  --color-brand-border: #e2e8f0;
-  --color-brand-border-light: #cbd5e1;
-  --color-brand-accent: #1d4ed8;
-  --color-brand-accent-hover: #1e40af;
-  --color-brand-text-muted: #64748b;
-  --color-brand-text-subtle: #94a3b8;
+  --drawer-width: 460px;
+  --toast-gap: 0.5rem;
 }

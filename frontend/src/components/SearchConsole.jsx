@@ -6,7 +6,6 @@ export default function SearchConsole({
   readinessScore,
   onSearchIntent,
   activeSearchQuery = '',
-  isDynamic = false,
   isLoading = false
 }) {
   const [searchInput, setSearchInput] = useState(activeSearchQuery);
@@ -125,11 +124,21 @@ export default function SearchConsole({
             <div className="h-7 w-px bg-zinc-200 dark:bg-zinc-700 hidden sm:block" />
 
             <div className="flex items-center space-x-2">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 block">Readiness</span>
-                <span className="font-semibold text-zinc-800 dark:text-zinc-200">{readinessScore}% compliant</span>
+              <div className="min-w-[120px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 block">Readiness</span>
+                  <span className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300">{readinessScore}%</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden" role="progressbar" aria-valuenow={readinessScore} aria-valuemin={0} aria-valuemax={100}>
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      readinessScore === 100 ? 'bg-emerald-500' : 'bg-blue-500 dark:bg-blue-400'
+                    }`}
+                    style={{ width: `${readinessScore}%` }}
+                  />
+                </div>
               </div>
-              
+
               {/* Concrete Status Iconography */}
               {readinessScore === 100 ? (
                 <div className="flex items-center space-x-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
