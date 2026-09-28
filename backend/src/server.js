@@ -107,7 +107,9 @@ function getFallbackSeed(query = '') {
   let seedFile = 'food_business.json';
   if (q.includes('solar') || q.includes('rooftop') || q.includes('msedcl') || q.includes('net meter') || q.includes('net-meter') || q.includes('pv')) {
     seedFile = 'rooftop_solar.json';
-  } else if (q.includes('gumasta') || q.includes('cloud kitchen') || q.includes('bakery') || q.includes('food business')) {
+  } else if (q.includes('gumasta') || q.includes('shop act') || q.includes('establishment act')) {
+    seedFile = 'gumasta_license.json';
+  } else if (q.includes('cloud kitchen') || q.includes('bakery') || q.includes('food business')) {
     seedFile = 'food_business.json';
   } else if (q.includes('fssai') || q.includes('restaurant')) {
     seedFile = 'fssai_license.json';

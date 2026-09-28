@@ -308,6 +308,12 @@ export default function App() {
         onOpenAdmin={() => setIsAdminOpen(true)}
         selectedWard={selectedWard}
         onSelectWard={setSelectedWard}
+        onGoHome={() => {
+          setActiveKey(null);
+          setActiveSearchQuery('');
+          setIsDynamicRoute(false);
+          setSelectedNodeId(null);
+        }}
       />
 
       {/* 2. Main Canvas Area */}
